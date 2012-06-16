@@ -215,13 +215,20 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 
 				if( typePar != null )
 				{
+					String name = meth.getName();
+					
+					if( "$init".equals(name) ) // constructor
+					{
+						name = typePar.getName(); 
+					}
+					
 					if( typePar.isInterface() )
 					{
-						origMethod = Bindings.findMethodInHierarchy(typePar, meth.getName(), meth.getParameterTypes());
+						origMethod = Bindings.findMethodInHierarchy(typePar, name, meth.getParameterTypes());
 					}
 					else
 					{
-						origMethod = Bindings.findMethodInType(typePar, meth.getName(), meth.getParameterTypes());
+						origMethod = Bindings.findMethodInType(typePar, name, meth.getParameterTypes());
 					}
 				}
 
