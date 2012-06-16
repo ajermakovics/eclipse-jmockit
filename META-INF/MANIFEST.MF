@@ -1,0 +1,17 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: Eclipse-jmockit-assist
+Bundle-SymbolicName: eclipse-jmockit-assist;singleton:=true
+Bundle-Version: 0.1.0
+Bundle-Activator: jmockit.assist.Activator
+Require-Bundle: org.eclipse.core.runtime,
+ org.eclipse.jdt.core,
+ org.eclipse.jdt.ui,
+ org.eclipse.jface.text,
+ org.eclipse.jface,
+ org.eclipse.core.resources,
+ org.eclipse.jdt.core.manipulation,
+ org.eclipse.ui.editors
+Bundle-ActivationPolicy: lazy
+Bundle-RequiredExecutionEnvironment: JavaSE-1.6
+Bundle-Vendor: Andrejs Jermakovics
