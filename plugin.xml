@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+   <extension
+         point="org.eclipse.jdt.ui.quickAssistProcessors">
+         <quickAssistProcessor
+          	name="JmockitQuickAssistProcessor"
+          	class="jmockit.assist.JmockitProposalComputer"
+          	id="jmockit.quick.assist.processor">
+    		</quickAssistProcessor>
+   </extension>
+	<extension
+		point="org.eclipse.jdt.ui.javaCompletionProposalComputer"
+		id="jmockitProposalCategory"
+		name="JMockit Proposal">
+		<proposalCategory icon="images/favicon.png"/>
+	</extension>
+ <extension point="org.eclipse.jdt.ui.javaCompletionProposalComputer"
+   id="JmockitProposalComputer"
+   name="JMockit Completion Proposal Computer">
+   <javaCompletionProposalComputer
+   		activate="true"
+      class="jmockit.assist.JmockitProposalComputer"
+      categoryId="jmockitProposalCategory">
+      			<partition type="__dftl_partition_content_type"/>
+			<partition type="__java_string"/>
+   </javaCompletionProposalComputer>
+ </extension>
+
+<extension
+      id="apt"
+      name="JMockit Compilation Participant"
+      point="org.eclipse.jdt.core.compilationParticipant">
+   <compilationParticipant
+         class="jmockit.assist.JMockitCompilationParticipant"
+         id="jmockit"
+         requiredSourceLevel="1.5"
+         createsProblems="true">
+      <managedMarker markerType="org.eclipse.jdt.apt.core.compile.problem"/>
+   </compilationParticipant>
+</extension>
+
+  <extension id="jmockit.marker" point="org.eclipse.core.resources.markers" name="JMockit Marker"> 
+      <persistent value="true"/> 
+      <super type="org.eclipse.core.resources.problemmarker"/> 
+      <super type="org.eclipse.jdt.core.problem"/> 
+      <super type="org.eclipse.core.resources.textmarker"/> 
+      
+      <attribute name="owner"/> 
+   </extension> 
+
+</plugin>
