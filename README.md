@@ -1,6 +1,6 @@
 Eclipse plugin for JMockit
 --
-[Eclipse](http://www.eclipse.org) plugin to assist with [JMockit](https://code.google.com/p/jmockit/) mock objects in unit tests. Provides mock method suggestions and simple static analysis to report API misuse at compile time.
+[Eclipse](http://www.eclipse.org) plugin that adds IDE support to [JMockit](https://code.google.com/p/jmockit/). Provides mock method suggestions and performs static analysis to report API misuse.
 
 Downloads
 --
