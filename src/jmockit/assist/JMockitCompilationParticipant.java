@@ -11,7 +11,7 @@
  */
 package jmockit.assist;
 
-import static jmockit.assist.ASTUtil.isAnnotationPresent;
+import static jmockit.assist.ASTUtil.isMockMethod;
 import static jmockit.assist.ASTUtil.isMockUpType;
 import static org.eclipse.jdt.core.dom.Modifier.isPrivate;
 
@@ -39,6 +39,7 @@ import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.MethodInvocation;
+import org.eclipse.jdt.core.dom.SimpleName;
 import org.eclipse.jdt.internal.compiler.problem.DefaultProblem;
 import org.eclipse.jdt.internal.compiler.problem.ProblemSeverities;
 import org.eclipse.jdt.internal.corext.dom.Bindings;
@@ -174,8 +175,10 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 		{
 			IMethodBinding meth = node.resolveMethodBinding();
 
-			if( meth != null
-					&& ASTUtil.isMockUpType(meth.getDeclaringClass()) && "getMockInstance".equals(meth.getName()) )
+			if( meth == null )
+				return true;
+			
+			if( ASTUtil.isMockUpType(meth.getDeclaringClass()) && "getMockInstance".equals(meth.getName()) )
 			{
 				ITypeBinding returnType = node.resolveTypeBinding();
 
@@ -186,7 +189,32 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 					addMarker(node.getName(), msg , false);
 				}
 			}
+			
+			if( node.getExpression() instanceof SimpleName )
+			{
+				SimpleName var = (SimpleName) node.getExpression();
+				String varName = var.getIdentifier();
+				
+				if( "it".equals(varName) ) // calling method on the 'it' field
+				{
+					MethodDeclaration surroundingMeth = ASTUtil.findAncestor(node, MethodDeclaration.class);
+					IMethodBinding mockMethod = null;
+					if( surroundingMeth != null )
+					{
+						mockMethod = surroundingMeth.resolveBinding();
+					}
 
+					if( mockMethod != null && isMockMethod(mockMethod) 
+							&& mockMethod.isSubsignature(meth) )
+					{
+						if( ! ASTUtil.isReentrantMockMethod(mockMethod) )
+						{
+							addMarker(node, "Method calls itself. Mark mock method as reentrant to call original object - @Mock(reentrant=true)", true);
+						}
+					}
+				}
+			}
+			
 			return true;
 		}
 
@@ -210,7 +238,7 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 					typePar = ASTUtil.findRealClassType(declaringClass);
 				}
 
-				boolean hasMockAnn = isAnnotationPresent(meth.getAnnotations(), "mockit.Mock");
+				boolean hasMockAnn = ASTUtil.isMockMethod(meth);;
 				IMethodBinding origMethod = null;
 
 				if( typePar != null )

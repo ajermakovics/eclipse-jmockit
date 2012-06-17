@@ -82,7 +82,7 @@ implements ICompletionProposalExtension4
 			final IMethod meth, final int start, final int length,
 			final StyledString displayName, final String completionProposal)
 					throws IllegalArgumentException, JavaModelException
-					{
+	{
 		super(completionProposal, cu, start, length, null, displayName, MAX_RELEVANCE );
 
 		Assert.isNotNull(meth);

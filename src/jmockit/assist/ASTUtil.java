@@ -114,6 +114,29 @@ public class ASTUtil
 	{
 		return findAnnotation(annotations, annName) != null;
 	}
+	
+	public static boolean isMockMethod(final IMethodBinding meth)
+	{
+		return meth != null && isAnnotationPresent(meth.getAnnotations(), "mockit.Mock");
+	}
+	
+	public static boolean isReentrantMockMethod(final IMethodBinding meth)
+	{
+		IAnnotationBinding ann = findAnnotation(meth.getAnnotations(), "mockit.Mock");
+		
+		if( ann != null )
+		{
+			for(IMemberValuePairBinding pair: ann.getDeclaredMemberValuePairs() )
+			{
+				if( "reentrant".equals( pair.getName()) )
+				{
+					return Boolean.valueOf(pair.getValue().toString());
+				}
+			}
+		}
+		
+		return false;
+	}
 
 	public static boolean hasMockClass(final ITypeBinding type)
 	{
@@ -179,6 +202,21 @@ public class ASTUtil
 		parser.setResolveBindings(true);
 		parser.setStatementsRecovery(true);
 		return (CompilationUnit) parser.createAST(mon); // parse
+	}
+
+	@SuppressWarnings("unchecked")
+	public static <T extends ASTNode> T findAncestor(ASTNode node, Class<T> clazz)
+	{
+		ASTNode parent = node.getParent();
+		while( parent != null )
+		{
+			if( parent.getClass() == clazz )
+			{
+				break;
+			}
+			parent = parent.getParent();
+		}
+		return (T) parent;
 	}
 
 }
