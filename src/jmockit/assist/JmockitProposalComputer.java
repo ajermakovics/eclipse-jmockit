@@ -90,7 +90,7 @@ public class JmockitProposalComputer implements IJavaCompletionProposalComputer,
 						{
 							objectMethods = getObjectMethods(jcontext.getProject());
 						}
-						
+
 						mockType = findMockType(cunit, jcontext );
 						paramType = findMockedType(cunit, mockType);
 					}
@@ -102,14 +102,14 @@ public class JmockitProposalComputer implements IJavaCompletionProposalComputer,
 				}
 			}
 		}
-		
+
 		if ( paramType != null && mockType != null )
 		{
 			try
 			{
 				existingMethods.addAll( getTypeMethods(mockType) );
 				existingMethods.removeAll(objectMethods);
-				
+
 				return getProposals(context, paramType, cunit, existingMethods, mon, mockType);
 			}
 			catch (Exception e)
@@ -140,10 +140,10 @@ public class JmockitProposalComputer implements IJavaCompletionProposalComputer,
 	}
 
 	private IType findMockedType(final ICompilationUnit cunit,
-			IType mockType) throws JavaModelException
+			final IType mockType) throws JavaModelException
 	{
 		IType paramType = null;
-		
+
 		if ( mockType != null && mockType.getSuperclassName() != null)
 		{
 			String superclassTypeSignature = mockType.getSuperclassTypeSignature();
@@ -201,12 +201,12 @@ public class JmockitProposalComputer implements IJavaCompletionProposalComputer,
 
 	private List<ICompletionProposal> getProposals(final ContentAssistInvocationContext context, final IType paramType,
 			final ICompilationUnit cunit, final Set<String> existingMethods,
-			final IProgressMonitor pm, IType mockType)
+			final IProgressMonitor pm, final IType mockType)
 					throws JavaModelException, BadLocationException
 	{
 		Collection<IJavaCompletionProposal> list = new ArrayList<IJavaCompletionProposal>();
 		String prefix = context.computeIdentifierPrefix().toString();
-		
+
 		addItFieldProposal(context, paramType, mockType, list, prefix);
 
 		for (final IMethod meth : getAllMethods(paramType, pm) )
@@ -240,12 +240,13 @@ public class JmockitProposalComputer implements IJavaCompletionProposalComputer,
 			}
 
 		}
-		
+
 		return new ArrayList<ICompletionProposal>(list);
 	}
 
 	private void addItFieldProposal(final ContentAssistInvocationContext context, final IType paramType,
-			IType mockType, Collection<IJavaCompletionProposal> list, String prefix) throws JavaModelException
+			final IType mockType, final Collection<IJavaCompletionProposal> list, final String prefix)
+					throws JavaModelException
 	{
 		boolean hasItField = false;
 		for(IField field : mockType.getFields())
@@ -256,7 +257,7 @@ public class JmockitProposalComputer implements IJavaCompletionProposalComputer,
 				break;
 			}
 		}
-		
+
 		if( !hasItField && "it".startsWith(prefix) )
 		{
 			String relpacement = paramType.getElementName() + " it;";
@@ -264,7 +265,7 @@ public class JmockitProposalComputer implements IJavaCompletionProposalComputer,
 			StyledString displayName = new StyledString("it : " + paramType.getElementName());
 			displayName.append(" - Access the mocked object 'it' of type "
 					+ paramType.getElementName() +"'", QUALIFIER_STYLER);
-			
+
 			IJavaCompletionProposal proposal
 			= new JavaCompletionProposal(relpacement, context.getInvocationOffset()-prefix.length(), prefix.length(),
 					image, displayName, 1);

@@ -11,8 +11,10 @@
  */
 package jmockit.assist;
 
+import static jmockit.assist.ASTUtil.findMockedType;
 import static jmockit.assist.ASTUtil.isMockMethod;
 import static jmockit.assist.ASTUtil.isMockUpType;
+import static jmockit.assist.ASTUtil.isReentrantMockMethod;
 import static org.eclipse.jdt.core.dom.Modifier.isPrivate;
 
 import java.util.ArrayList;
@@ -35,8 +37,11 @@ import org.eclipse.jdt.core.dom.AnonymousClassDeclaration;
 import org.eclipse.jdt.core.dom.ClassInstanceCreation;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.ExpressionStatement;
+import org.eclipse.jdt.core.dom.FieldDeclaration;
+import org.eclipse.jdt.core.dom.IBinding;
 import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
+import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.SimpleName;
@@ -62,7 +67,7 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 			IFile file = f.getFile();
 
 			ICompilationUnit cunit = JavaCore.createCompilationUnitFrom(file);
-			if( cunit != null )
+			if (cunit != null)
 			{
 				CompilationUnit cu = ASTUtil.getAstOrParse(cunit, null);
 
@@ -94,12 +99,12 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 	{
 		try
 		{
-			MockASTVisitor visitor = new MockASTVisitor( context.getWorkingCopy() );
-			context.getAST3().accept(visitor );
+			MockASTVisitor visitor = new MockASTVisitor(context.getWorkingCopy());
+			context.getAST3().accept(visitor);
 
 			CategorizedProblem[] probs = visitor.getProblems();
 
-			if( probs.length != 0 )
+			if (probs.length != 0)
 			{
 				context.putProblems(probs[0].getMarkerType(), probs);
 			}
@@ -112,20 +117,20 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 
 	private static class MockASTVisitor extends ASTVisitor
 	{
-		private ICompilationUnit icunit;
+		private final ICompilationUnit icunit;
 		private CompilationUnit cu;
 
-		private List<CategorizedProblem> probs = new ArrayList<CategorizedProblem>();
+		private final List<CategorizedProblem> probs = new ArrayList<CategorizedProblem>();
 
 		public MockASTVisitor(final ICompilationUnit cunitPar)
 		{
-			this.icunit = cunitPar;
+			icunit = cunitPar;
 		}
 
 		@Override
 		public boolean visit(final CompilationUnit node)
 		{
-			this.cu = node;
+			cu = node;
 			return true;
 		}
 
@@ -134,33 +139,32 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 		{
 			ITypeBinding binding = node.resolveBinding();
 
-			if( ASTUtil.isMockUpType(binding.getSuperclass()) ) // new MockUp< type >
+			if (ASTUtil.isMockUpType(binding.getSuperclass())) // new MockUp< type >
 			{
 				ITypeBinding typePar = ASTUtil.getFirstTypeParameter(node);
 				ASTNode parent = node.getParent();
 
-				if( parent instanceof ClassInstanceCreation && typePar.isInterface() ) // creating interface mock
+				if (parent instanceof ClassInstanceCreation && typePar.isInterface()) // creating interface mock
 				{
 					ASTNode gparent = parent.getParent();
 					ClassInstanceCreation creation = (ClassInstanceCreation) parent;
 
-					if( gparent instanceof MethodInvocation ) // method invocation follows
+					if (gparent instanceof MethodInvocation) // method invocation follows
 					{
 						MethodInvocation inv = (MethodInvocation) gparent;
 						IMethodBinding meth = inv.resolveMethodBinding();
 
-						if( "getMockInstance".equals( meth.getName() ) )
+						if ("getMockInstance".equals(meth.getName()))
 						{
-							if( gparent.getParent() instanceof ExpressionStatement )
+							if (gparent.getParent() instanceof ExpressionStatement)
 							{
-								addMarker(inv.getName(),
-										"Returned mock instance is not being used.", false);
+								addMarker(inv.getName(), "Returned mock instance is not being used.", false);
 							}
 						}
 						else
 						{
-							addMarker(creation.getType(),
-									"Missing call to getMockInstance() on MockUp of interface", false);
+							addMarker(creation.getType(), "Missing call to getMockInstance() on MockUp of interface",
+									false);
 						}
 					}
 
@@ -175,46 +179,86 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 		{
 			IMethodBinding meth = node.resolveMethodBinding();
 
-			if( meth == null )
+			if (meth == null)
+			{
 				return true;
-			
-			if( ASTUtil.isMockUpType(meth.getDeclaringClass()) && "getMockInstance".equals(meth.getName()) )
+			}
+
+			if ( isMockUpType(meth.getDeclaringClass()) && "getMockInstance".equals(meth.getName()))
 			{
 				ITypeBinding returnType = node.resolveTypeBinding();
 
-				if( !returnType.isInterface() )
+				if (!returnType.isInterface())
 				{
 					String msg = "getMockInstance() used on mock of class " + returnType.getName()
 							+ ". Use on interfaces";
-					addMarker(node.getName(), msg , false);
+					addMarker(node.getName(), msg, false);
 				}
 			}
-			
-			if( node.getExpression() instanceof SimpleName )
+
+			visitItFieldInvocation(node, meth);
+
+			return true;
+		}
+
+		private void visitItFieldInvocation(final MethodInvocation node, final IMethodBinding meth)
+		{
+			if (node.getExpression() instanceof SimpleName)
 			{
 				SimpleName var = (SimpleName) node.getExpression();
 				String varName = var.getIdentifier();
-				
-				if( "it".equals(varName) ) // calling method on the 'it' field
-				{
-					MethodDeclaration surroundingMeth = ASTUtil.findAncestor(node, MethodDeclaration.class);
-					IMethodBinding mockMethod = null;
-					if( surroundingMeth != null )
-					{
-						mockMethod = surroundingMeth.resolveBinding();
-					}
 
-					if( mockMethod != null && isMockMethod(mockMethod) 
-							&& mockMethod.isSubsignature(meth) )
+				IBinding exprBinding = var.resolveBinding();
+
+				if ( "it".equals(varName) && exprBinding instanceof IVariableBinding ) // call on 'it' field
+				{
+					IVariableBinding varBinding = (IVariableBinding) exprBinding;
+					IMethodBinding mockMethod = getSurroundingMockMethod(node);
+
+					if( mockMethod != null && varBinding.isField() && mockMethod.isSubsignature(meth)
+							&& varBinding.getDeclaringClass().equals(mockMethod.getDeclaringClass()) )
 					{
-						if( ! ASTUtil.isReentrantMockMethod(mockMethod) )
+						ITypeBinding mockedType = findMockedType(node);
+
+						if( mockedType.equals(varBinding.getType()) // field type is correct mocked type
+								&& !isReentrantMockMethod(mockMethod) )
 						{
-							addMarker(node, "Method calls itself. Mark mock method as reentrant to call original object - @Mock(reentrant=true)", true);
+							addMarker( node,
+									"Method calls itself. Set @Mock(reentrant=true) on method "
+											+ mockMethod.getName(), true);
 						}
 					}
 				}
 			}
-			
+		}
+
+		private IMethodBinding getSurroundingMockMethod(final MethodInvocation node)
+		{
+			MethodDeclaration surroundingMeth = ASTUtil.findAncestor(node, MethodDeclaration.class);
+			IMethodBinding mockMethod = null;
+
+			if (surroundingMeth != null)
+			{
+				mockMethod = surroundingMeth.resolveBinding();
+			}
+
+			if( mockMethod != null && isMockMethod(mockMethod) )
+			{
+				return mockMethod;
+			}
+			else
+			{
+				return null;
+			}
+		}
+
+		@Override
+		public boolean visit(final FieldDeclaration node)
+		{
+			//add check: 'it' field should have the correct type
+			// it field should not be private
+			// adding fields to a  mock - warning
+
 			return true;
 		}
 
@@ -222,55 +266,43 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 		public boolean visit(final MethodDeclaration node)
 		{
 			IMethodBinding meth = node.resolveBinding();
-			ITypeBinding typePar, declaringClass = meth.getDeclaringClass();
+			ITypeBinding mockedType = ASTUtil.findMockedType(node, meth); // new MockUp< MockedType >
 
-			boolean isMockClass = ASTUtil.hasMockClass(declaringClass);
-			boolean isMockUpType = isMockUpType(declaringClass.getSuperclass());
-
-			if( isMockUpType || isMockClass )
+			if ( mockedType != null )
 			{
-				if( isMockUpType )
-				{
-					typePar = ASTUtil.getFirstTypeParameter(node.getParent());
-				}
-				else
-				{
-					typePar = ASTUtil.findRealClassType(declaringClass);
-				}
-
-				boolean hasMockAnn = ASTUtil.isMockMethod(meth);;
+				boolean hasMockAnn = ASTUtil.isMockMethod(meth);
 				IMethodBinding origMethod = null;
 
-				if( typePar != null )
+				if (mockedType != null)
 				{
 					String name = meth.getName();
-					
-					if( "$init".equals(name) ) // constructor
+
+					if ("$init".equals(name)) // constructor
 					{
-						name = typePar.getName(); 
+						name = mockedType.getName();
 					}
-					
-					if( typePar.isInterface() )
+
+					if (mockedType.isInterface())
 					{
-						origMethod = Bindings.findMethodInHierarchy(typePar, name, meth.getParameterTypes());
+						origMethod = Bindings.findMethodInHierarchy(mockedType, name, meth.getParameterTypes());
 					}
 					else
 					{
-						origMethod = Bindings.findMethodInType(typePar, name, meth.getParameterTypes());
+						origMethod = Bindings.findMethodInType(mockedType, name, meth.getParameterTypes());
 					}
 				}
 
-				if( !hasMockAnn && origMethod != null )
+				if (!hasMockAnn && origMethod != null)
 				{
 					addMarker(node.getName(), "Mocked method missing @Mock annotation", false);
 				}
 
-				if( hasMockAnn && origMethod == null )
+				if (hasMockAnn && origMethod == null)
 				{
-					addMarker(node.getName(), "Mocked real method not found in type " , true);
+					addMarker(node.getName(), "Mocked real method not found in type ", true);
 				}
 
-				if( hasMockAnn && origMethod != null && isPrivate(meth.getModifiers()) )
+				if (hasMockAnn && origMethod != null && isPrivate(meth.getModifiers()))
 				{
 					addMarker(node.getName(), "Mocked method should not be private", true);
 				}
@@ -287,17 +319,20 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 				int endChar = start + node.getLength();
 				int line = cu.getLineNumber(start);
 				int col = cu.getColumnNumber(start);
-				int id = IProblem.MethodRelated;
+				int id = IProblem.TypeRelated;
 
-				int severity = ProblemSeverities.Warning;
-				if( isError )
+				int severity = isError ? ProblemSeverities.Error : ProblemSeverities.Warning;
+
+				CategorizedProblem problem = new DefaultProblem(icunit.getPath().toOSString().toCharArray(), msg, id,
+						new String[]
+						{}, severity, start, endChar, line, col)
 				{
-					severity = ProblemSeverities.Error;
-				}
-
-				CategorizedProblem problem
-				= new DefaultProblem(icunit.getPath().toOSString().toCharArray(), msg, id,
-						new String[]{}, severity, start, endChar, line, col);
+					@Override
+					public String getMarkerType()
+					{
+						return "jmockit.eclipse.marker";
+					}
+				};
 
 				probs.add(problem);
 			}
@@ -309,10 +344,10 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 
 		public CategorizedProblem[] getProblems()
 		{
-			return probs.toArray(new CategorizedProblem[]{});
+			return probs.toArray(new CategorizedProblem[]
+			{});
 		}
 
 	}
-
 
 }

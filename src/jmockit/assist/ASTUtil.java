@@ -29,6 +29,7 @@ import org.eclipse.jdt.core.dom.IMemberValuePairBinding;
 import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
+import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.ParameterizedType;
 import org.eclipse.jdt.core.dom.Type;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
@@ -114,16 +115,16 @@ public class ASTUtil
 	{
 		return findAnnotation(annotations, annName) != null;
 	}
-	
+
 	public static boolean isMockMethod(final IMethodBinding meth)
 	{
 		return meth != null && isAnnotationPresent(meth.getAnnotations(), "mockit.Mock");
 	}
-	
+
 	public static boolean isReentrantMockMethod(final IMethodBinding meth)
 	{
 		IAnnotationBinding ann = findAnnotation(meth.getAnnotations(), "mockit.Mock");
-		
+
 		if( ann != null )
 		{
 			for(IMemberValuePairBinding pair: ann.getDeclaredMemberValuePairs() )
@@ -134,7 +135,7 @@ public class ASTUtil
 				}
 			}
 		}
-		
+
 		return false;
 	}
 
@@ -205,7 +206,7 @@ public class ASTUtil
 	}
 
 	@SuppressWarnings("unchecked")
-	public static <T extends ASTNode> T findAncestor(ASTNode node, Class<T> clazz)
+	public static <T extends ASTNode> T findAncestor(final ASTNode node, final Class<T> clazz)
 	{
 		ASTNode parent = node.getParent();
 		while( parent != null )
@@ -217,6 +218,40 @@ public class ASTUtil
 			parent = parent.getParent();
 		}
 		return (T) parent;
+	}
+
+	public static ITypeBinding findMockedType(final MethodInvocation node)
+	{
+		MethodDeclaration surroundingMeth = findAncestor(node, MethodDeclaration.class);
+
+		if( surroundingMeth != null )
+		{
+			return findMockedType(surroundingMeth, surroundingMeth.resolveBinding());
+		}
+		else
+		{
+			return null;
+		}
+	}
+
+	public static ITypeBinding findMockedType(final MethodDeclaration node, final IMethodBinding meth)
+	{
+		ITypeBinding typePar = null;
+
+		ITypeBinding declaringClass = meth.getDeclaringClass();
+
+		boolean isMockClass = hasMockClass(declaringClass);
+		boolean isMockUpType = isMockUpType(declaringClass.getSuperclass());
+
+		if (isMockUpType)
+		{
+			typePar = getFirstTypeParameter(node.getParent());
+		}
+		else if ( isMockClass )
+		{
+			typePar = findRealClassType(declaringClass);
+		}
+		return typePar;
 	}
 
 }

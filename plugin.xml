@@ -28,7 +28,7 @@
  </extension>
 
 <extension
-      id="apt"
+      id="jmockit.eclipse.compilationparticipant"
       name="JMockit Compilation Participant"
       point="org.eclipse.jdt.core.compilationParticipant">
    <compilationParticipant
@@ -36,17 +36,17 @@
          id="jmockit"
          requiredSourceLevel="1.5"
          createsProblems="true">
-      <managedMarker markerType="org.eclipse.jdt.apt.core.compile.problem"/>
+      <managedMarker markerType="jmockit.eclipse.marker"/>
    </compilationParticipant>
 </extension>
 
-  <extension id="jmockit.marker" point="org.eclipse.core.resources.markers" name="JMockit Marker"> 
+  <extension id="jmockit.eclipse.marker" point="org.eclipse.core.resources.markers" name="JMockit Problem"> 
       <persistent value="true"/> 
       <super type="org.eclipse.core.resources.problemmarker"/> 
       <super type="org.eclipse.jdt.core.problem"/> 
       <super type="org.eclipse.core.resources.textmarker"/> 
       
       <attribute name="owner"/> 
-   </extension> 
+   </extension>
 
 </plugin>
