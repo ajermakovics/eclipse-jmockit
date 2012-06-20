@@ -150,7 +150,8 @@ implements ICompletionProposalExtension4
 		declaringType = findDeclaringTypeFromNode(node);
 		if( declaringType == null )
 		{
-			declaringType = findDeclaringTypeFromMethod();
+			System.err.println("declaring type not found");
+			//declaringType = findDeclaringTypeFromMethod();
 		}
 
 		if (declaringType != null)
@@ -222,8 +223,7 @@ implements ICompletionProposalExtension4
 			final CodeGenerationSettings settings) throws CoreException, JavaModelException
 	{
 		MethodDeclaration stub = StubUtility2.createImplementationStub(fCompilationUnit, rewrite,
-				importRewrite, context, methodToMock, declaringType.getName(), settings,
-				false );
+				importRewrite, context, methodToMock, declaringType.getName(), settings, false);
 
 		stub.modifiers().clear();
 		ASTUtil.addAnnotation("Mock", fJavaProject, rewrite, stub, methodToMock);
@@ -238,18 +238,21 @@ implements ICompletionProposalExtension4
 		{
 			setReturnStatement(stub, methodToMock, declaringType, ast, rewrite);
 		}
+
 		return stub;
 	}
 
 	private IMethodBinding findMethodToMock(final ITypeBinding declaringType)
 	{
 		ASTUtil.resolveParameterTypes(fParamTypes, method.getDeclaringType());
+
 		IMethodBinding methodToOverride = Bindings.findMethodInHierarchy(declaringType, fMethodName, fParamTypes);
 
 		if( methodToOverride == null )
 		{
 			methodToOverride = Bindings.findMethodInHierarchy(declaringType, fMethodName, (String[]) null);
 		}
+
 		return methodToOverride;
 	}
 
@@ -270,7 +273,7 @@ implements ICompletionProposalExtension4
 			{
 				declaringType = ASTUtil.findRealClassType(curType);
 			}
-			else if( ASTUtil.isMockUpType(curType) )
+			else if( ASTUtil.isMockUpType(curType.getSuperclass()) )
 			{
 				declaringType = ASTUtil.getFirstTypeParam(typeDec.getSuperclassType());
 			}

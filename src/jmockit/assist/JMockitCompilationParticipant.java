@@ -45,9 +45,10 @@ import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.SimpleName;
+import org.eclipse.jdt.core.dom.Type;
+import org.eclipse.jdt.core.dom.TypeDeclaration;
 import org.eclipse.jdt.internal.compiler.problem.DefaultProblem;
 import org.eclipse.jdt.internal.compiler.problem.ProblemSeverities;
-import org.eclipse.jdt.internal.corext.dom.Bindings;
 
 @SuppressWarnings("restriction")
 /**
@@ -135,6 +136,20 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 		}
 
 		@Override
+		public boolean visit(final TypeDeclaration node)
+		{
+			ITypeBinding binding = node.resolveBinding();
+
+			if (ASTUtil.isMockUpType(binding.getSuperclass()))
+			{
+				ITypeBinding typePar = ASTUtil.getFirstTypeParameter(node);
+				checkTypeParameters(typePar, node.getSuperclassType());
+			}
+
+			return super.visit(node);
+		}
+
+		@Override
 		public boolean visit(final AnonymousClassDeclaration node)
 		{
 			ITypeBinding binding = node.resolveBinding();
@@ -144,12 +159,13 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 				ITypeBinding typePar = ASTUtil.getFirstTypeParameter(node);
 				ASTNode parent = node.getParent();
 
-				if (parent instanceof ClassInstanceCreation && typePar.isInterface()) // creating interface mock
+				if (parent instanceof ClassInstanceCreation ) // creating interface mock
 				{
 					ASTNode gparent = parent.getParent();
 					ClassInstanceCreation creation = (ClassInstanceCreation) parent;
 
-					if (gparent instanceof MethodInvocation) // method invocation follows
+					Type typeNode = creation.getType();
+					if (typePar.isInterface() && gparent instanceof MethodInvocation) // method invocation follows
 					{
 						MethodInvocation inv = (MethodInvocation) gparent;
 						IMethodBinding meth = inv.resolveMethodBinding();
@@ -163,15 +179,33 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 						}
 						else
 						{
-							addMarker(creation.getType(), "Missing call to getMockInstance() on MockUp of interface",
+							addMarker(typeNode, "Missing call to getMockInstance() on MockUp of interface",
 									false);
 						}
 					}
 
+					checkTypeParameters(typePar, typeNode);
 				}
+
 			}
 
 			return true;
+		}
+
+		public void checkTypeParameters(final ITypeBinding typePar, final Type typeNode)
+		{
+			if( typePar.isParameterizedType() ) // new MockUp< Collection<String> >
+			{
+				for(ITypeBinding arg : typePar.getTypeArguments())
+				{
+					if( !"java.lang.Object".equals(arg.getQualifiedName()) && !arg.isTypeVariable() )
+					{
+						addMarker(typeNode,
+								"<" + arg.getName() + "> should be replaced with <Object>"
+								+ " or some type variable <T> in mock declaration" , false);
+					}
+				}
+			}
 		}
 
 		@Override
@@ -201,6 +235,7 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 			return true;
 		}
 
+		// consider visit(FieldAccess )
 		private void visitItFieldInvocation(final MethodInvocation node, final IMethodBinding meth)
 		{
 			if (node.getExpression() instanceof SimpleName)
@@ -259,6 +294,9 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 			// it field should not be private
 			// adding fields to a  mock - warning
 
+			//System.out.println("field: " + node.fragments().get(0).getClass() );
+			// VariableDeclarationFragment
+
 			return true;
 		}
 
@@ -282,14 +320,8 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 						name = mockedType.getName();
 					}
 
-					if (mockedType.isInterface())
-					{
-						origMethod = Bindings.findMethodInHierarchy(mockedType, name, meth.getParameterTypes());
-					}
-					else
-					{
-						origMethod = Bindings.findMethodInType(mockedType, name, meth.getParameterTypes());
-					}
+					ITypeBinding[] parameterTypes = meth.getParameterTypes();
+					origMethod = ASTUtil.findRealMethodInType(mockedType.getErasure(), name, parameterTypes);
 				}
 
 				if (!hasMockAnn && origMethod != null)

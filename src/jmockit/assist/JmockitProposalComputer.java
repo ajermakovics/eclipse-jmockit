@@ -155,7 +155,10 @@ public class JmockitProposalComputer implements IJavaCompletionProposalComputer,
 				String typeParam = typeParamSig[0];
 				String resolvedTypeParam = JavaModelUtil.getResolvedTypeName(typeParam, mockType);
 
-				paramType = cunit.getJavaProject().findType(resolvedTypeParam);
+				if( resolvedTypeParam != null )
+				{
+					paramType = cunit.getJavaProject().findType(resolvedTypeParam);
+				}
 			}
 
 		}
@@ -187,10 +190,15 @@ public class JmockitProposalComputer implements IJavaCompletionProposalComputer,
 
 						String[][] resolvedTypes = itype.resolveType(className);
 
-						if( resolvedTypes.length != 0 )
+						if( resolvedTypes == null )
+						{
+							resolvedTypes = itype.resolveType(className);
+						}
+
+						if( resolvedTypes != null && resolvedTypes.length != 0 )
 						{
 							String fullType = JavaModelUtil.concatenateName(resolvedTypes[0][0], resolvedTypes[0][1]);
-							paramType = cunit.getJavaProject().findType(  fullType );
+							paramType = cunit.getJavaProject().findType( fullType );
 						}
 					}
 				}

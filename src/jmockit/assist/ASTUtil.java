@@ -34,6 +34,7 @@ import org.eclipse.jdt.core.dom.ParameterizedType;
 import org.eclipse.jdt.core.dom.Type;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
 import org.eclipse.jdt.core.dom.rewrite.ASTRewrite;
+import org.eclipse.jdt.internal.corext.dom.Bindings;
 import org.eclipse.jdt.internal.corext.util.JavaModelUtil;
 import org.eclipse.jdt.ui.SharedASTProvider;
 
@@ -48,7 +49,7 @@ public class ASTUtil
 			try
 			{
 				String resTypeName = JavaModelUtil.getResolvedTypeName(paramTypes[i], declaringType);
-				paramTypes[i] = resTypeName;
+				paramTypes[i] = Util.firstNonNull(resTypeName, paramTypes[i]);
 			}
 			catch(Exception e)
 			{
@@ -194,7 +195,7 @@ public class ASTUtil
 
 	public static CompilationUnit parse(final ITypeRoot unit, final IProgressMonitor mon)
 	{
-		System.err.println(" - - - Parsing " + unit.getElementName());
+		//System.err.println(" - - - Parsing " + unit.getElementName());
 
 		ASTParser parser = ASTParser.newParser(AST.JLS3);
 		parser.setKind(ASTParser.K_COMPILATION_UNIT);
@@ -254,4 +255,34 @@ public class ASTUtil
 		return typePar;
 	}
 
+	public static IMethodBinding findMethodInType(final ITypeBinding type, final String name,
+			final ITypeBinding[] paramTypes)
+	{
+		IMethodBinding origMethod;
+
+		if (type.isInterface())
+		{
+			origMethod = Bindings.findMethodInHierarchy(type, name, paramTypes);
+		}
+		else
+		{
+			origMethod = Bindings.findMethodInType(type, name, paramTypes);
+		}
+
+		return origMethod;
+	}
+
+	public static IMethodBinding findRealMethodInType(final ITypeBinding type, final String name,
+			final ITypeBinding[] paramTypes)
+	{
+		IMethodBinding origMethod = findMethodInType(type, name, paramTypes);
+
+		if( origMethod == null && type.getTypeArguments().length != 0  )
+		{
+			// no method matches exactly, there could be type arguments (which we don't handle yet)
+			origMethod = findMethodInType(type, name, null); // match without params
+		}
+
+		return origMethod;
+	}
 }
