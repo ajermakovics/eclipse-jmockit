@@ -4,7 +4,7 @@ Eclipse plugin for JMockit
 
 Downloads
 --
-- v 0.1.0 [eclipse-jmockit-assist_0.1.0.jar](https://github.com/downloads/ajermakovics/eclipse-jmockit-assist/eclipse-jmockit-assist_0.1.0.jar)
+- v 0.1.1 [eclipse-jmockit-assist_0.1.1.jar](https://github.com/downloads/ajermakovics/eclipse-jmockit-assist/eclipse-jmockit-assist_0.1.1.jar)
 
 Features / Usage
 --
@@ -14,14 +14,14 @@ Features / Usage
 
 - Reports warnings as-you-type if mocking API is not used correctly
 	* No corresponding real method for mocked method
-	* Mock method is private
-	* Mock method missing `@Mock` annotation 
+	* Mock method calling itself but is not marked as 'reentrant'
 	* `MockUp` used with interface but missing `getMockInstance()` call
+	* Mock method missing `@Mock` annotation 
 	* ...
 
 Installation
 --
-Copy the [plugin jar](https://github.com/downloads/ajermakovics/eclipse-jmockit-assist/eclipse-jmockit-assist_0.1.0.jar) to `eclipse/dropins` folder. Restart Eclipse.
+Copy the [plugin jar](https://github.com/downloads/ajermakovics/eclipse-jmockit-assist/eclipse-jmockit-assist_0.1.1.jar) to `eclipse/dropins` folder. Restart Eclipse.
 
 There is no update site yet.
 
