@@ -11,22 +11,27 @@
  */
 package jmockit.assist;
 
-import org.eclipse.core.internal.runtime.InternalPlatform;
-import org.eclipse.core.runtime.ILog;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
-import org.osgi.framework.BundleActivator;
+import org.eclipse.jface.preference.IPreferenceStore;
+import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.osgi.framework.BundleContext;
 
-@SuppressWarnings("restriction")
-public class Activator implements BundleActivator
+
+public class Activator extends AbstractUIPlugin
 {
 
 	private static BundleContext context;
+	private static Activator plugin;
 
 	static BundleContext getContext()
 	{
 		return context;
+	}
+
+	public Activator()
+	{
+		plugin = this;
 	}
 
 	/*
@@ -37,6 +42,7 @@ public class Activator implements BundleActivator
 	@Override
 	public final void start(final BundleContext bundleContext) throws Exception
 	{
+		super.start(bundleContext);
 		Activator.context = bundleContext;
 	}
 
@@ -48,6 +54,7 @@ public class Activator implements BundleActivator
 	@Override
 	public final void stop(final BundleContext bundleContext) throws Exception
 	{
+		super.stop(bundleContext);
 		Activator.context = null;
 	}
 
@@ -55,18 +62,18 @@ public class Activator implements BundleActivator
 	{
 		e.printStackTrace();
 		Status status = new Status(IStatus.ERROR, context.getBundle().getSymbolicName(), e.getMessage(), e);
-		getLog().log(status);
+		plugin.getLog().log(status);
 	}
 
 	public static void info(final String msg)
 	{
 		Status status = new Status(IStatus.INFO, context.getBundle().getSymbolicName(), msg);
-		getLog().log(status);
+		plugin.getLog().log(status);
 	}
 
-	public static ILog getLog()
+	public static IPreferenceStore getPrefStore()
 	{
-		return InternalPlatform.getDefault().getLog(context.getBundle());
+		return plugin.getPreferenceStore();
 	}
 
 }

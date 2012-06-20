@@ -48,5 +48,19 @@
       
       <attribute name="owner"/> 
    </extension>
+  <extension
+        point="org.eclipse.ui.preferencePages">
+     <page
+           class="jmockit.assist.prefs.PreferencePage"
+           id="jmockit.eclipse.preferencePage"
+           name="JMockit">
+     </page>
+  </extension>
+  <extension
+        point="org.eclipse.core.runtime.preferences">
+     <initializer
+           class="jmockit.assist.prefs.PrefInitializer">
+     </initializer>
+  </extension>
 
 </plugin>

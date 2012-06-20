@@ -69,7 +69,8 @@ public class MockMethodCompletionProposal extends JavaTypeCompletionProposal
 implements ICompletionProposalExtension4
 {
 
-	private static final int MAX_RELEVANCE = 100;
+	static final int MAX_RELEVANCE = 100;
+	static final int METHOD_RELEVANCE = 90;
 
 	private final IJavaProject fJavaProject;
 	private final IMethod method;
@@ -83,7 +84,7 @@ implements ICompletionProposalExtension4
 			final StyledString displayName, final String completionProposal)
 					throws IllegalArgumentException, JavaModelException
 	{
-		super(completionProposal, cu, start, length, null, displayName, MAX_RELEVANCE );
+		super(completionProposal, cu, start, length, null, displayName, METHOD_RELEVANCE );
 
 		Assert.isNotNull(meth);
 		Assert.isNotNull(cu);
@@ -98,7 +99,7 @@ implements ICompletionProposalExtension4
 		StringBuffer buffer = new StringBuffer();
 		buffer.append("@Mock ");
 		buffer.append(completionProposal);
-		buffer.append(" { }"); //$NON-NLS-1$
+		buffer.append(" { }");
 
 		setImage(JavaPluginImages.get(JavaPluginImages.IMG_MISC_DEFAULT));
 
@@ -282,25 +283,6 @@ implements ICompletionProposalExtension4
 		return declaringType;
 	}
 
-	private ITypeBinding findDeclaringTypeFromMethod()
-	{
-		ITypeBinding declaringType = null;
-
-		String decTypeKey = method.getDeclaringType().getKey();
-		CompilationUnit methAst = ASTUtil.getAstOrParse(method.getTypeRoot(), null);
-
-		if( methAst != null )
-		{
-			ASTNode node = methAst.findDeclaringNode(decTypeKey);
-			if( node instanceof TypeDeclaration )
-			{
-				TypeDeclaration typeDec = (TypeDeclaration) node;
-				declaringType = typeDec.resolveBinding();
-			}
-		}
-		return declaringType;
-	}
-
 	private ImportRewriteContext createImportRewriteContext()
 	{
 		ImportRewriteContext context;
@@ -354,7 +336,7 @@ implements ICompletionProposalExtension4
 		}
 		catch (BadLocationException e)
 		{
-			return ""; //$NON-NLS-1$
+			return "";
 		}
 	}
 

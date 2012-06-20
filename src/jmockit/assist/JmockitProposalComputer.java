@@ -271,12 +271,12 @@ public class JmockitProposalComputer implements IJavaCompletionProposalComputer,
 			String relpacement = paramType.getElementName() + " it;";
 			Image image = JavaPluginImages.get(JavaPluginImages.IMG_FIELD_DEFAULT);
 			StyledString displayName = new StyledString("it : " + paramType.getElementName());
-			displayName.append(" - Access the mocked object 'it' of type "
+			displayName.append(" - Access the mocked object 'it' of type '"
 					+ paramType.getElementName() +"'", QUALIFIER_STYLER);
 
 			IJavaCompletionProposal proposal
 			= new JavaCompletionProposal(relpacement, context.getInvocationOffset()-prefix.length(), prefix.length(),
-					image, displayName, 1);
+					image, displayName, MockMethodCompletionProposal.MAX_RELEVANCE);
 			list.add(proposal );
 		}
 	}
@@ -292,7 +292,7 @@ public class JmockitProposalComputer implements IJavaCompletionProposalComputer,
 				+ "(" + params + ") : " + Signature.getSimpleName(Signature.toString(meth.getReturnType())));
 
 		String desc = meth.isConstructor() ? "constructor" : "method";
-		displayName.append(" - Mock " + desc + " in '"
+		displayName.append(" - Mock " + desc + " of '"
 				+ paramType.getElementName() +"'", QUALIFIER_STYLER);
 		String completionProposal = Signature.toString(meth.getReturnType()) + " " + methodName;
 

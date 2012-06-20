@@ -281,6 +281,11 @@ public class ASTUtil
 		{
 			// no method matches exactly, there could be type arguments (which we don't handle yet)
 			origMethod = findMethodInType(type, name, null); // match without params
+
+			if( origMethod != null && origMethod.getParameterTypes().length != paramTypes.length)
+			{
+				origMethod = null;
+			}
 		}
 
 		return origMethod;

@@ -20,6 +20,9 @@ import static org.eclipse.jdt.core.dom.Modifier.isPrivate;
 import java.util.ArrayList;
 import java.util.List;
 
+import jmockit.assist.prefs.Prefs;
+import jmockit.assist.prefs.Prefs.CheckScope;
+
 import org.eclipse.core.resources.IFile;
 import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.IJavaProject;
@@ -63,6 +66,11 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 	@Override
 	public void buildStarting(final BuildContext[] files, final boolean isBatch)
 	{
+		if( getCheckScope() != CheckScope.Workspace )
+		{
+			return;
+		}
+
 		for (BuildContext f : files)
 		{
 			IFile file = f.getFile();
@@ -79,9 +87,29 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 		}
 	}
 
+	public static CheckScope getCheckScope()
+	{
+		String propVal = Activator.getPrefStore().getString(Prefs.PROP_CHECK_SCOPE);
+		CheckScope scope = CheckScope.Workspace;
+
+		try
+		{
+			scope = CheckScope.valueOf(propVal);
+		} catch(Exception e)
+		{
+			Activator.log(e);
+		}
+		return scope;
+	}
+
 	@Override
 	public boolean isActive(final IJavaProject project)
 	{
+		if( getCheckScope() == CheckScope.Disabled )
+		{
+			return false;
+		}
+
 		IType mockitType = null;
 		try
 		{
@@ -98,6 +126,11 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 	@Override
 	public void reconcile(final ReconcileContext context)
 	{
+		if( getCheckScope() == CheckScope.Disabled )
+		{
+			return;
+		}
+
 		try
 		{
 			MockASTVisitor visitor = new MockASTVisitor(context.getWorkingCopy());
@@ -116,7 +149,7 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 		}
 	}
 
-	private static class MockASTVisitor extends ASTVisitor
+	public static final class MockASTVisitor extends ASTVisitor
 	{
 		private final ICompilationUnit icunit;
 		private CompilationUnit cu;
@@ -138,13 +171,13 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 		@Override
 		public boolean visit(final TypeDeclaration node)
 		{
-			ITypeBinding binding = node.resolveBinding();
-
-			if (ASTUtil.isMockUpType(binding.getSuperclass()))
-			{
-				ITypeBinding typePar = ASTUtil.getFirstTypeParameter(node);
-				checkTypeParameters(typePar, node.getSuperclassType());
-			}
+//			ITypeBinding binding = node.resolveBinding();
+//
+//			if (ASTUtil.isMockUpType(binding.getSuperclass()))
+//			{
+//				ITypeBinding typePar = ASTUtil.getFirstTypeParameter(node);
+//				checkTypeParameters(typePar, node.getSuperclassType());
+//			}
 
 			return super.visit(node);
 		}
@@ -159,32 +192,35 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 				ITypeBinding typePar = ASTUtil.getFirstTypeParameter(node);
 				ASTNode parent = node.getParent();
 
-				if (parent instanceof ClassInstanceCreation ) // creating interface mock
+				if (parent instanceof ClassInstanceCreation && typePar.isInterface()  ) // creating interface mock
 				{
 					ASTNode gparent = parent.getParent();
 					ClassInstanceCreation creation = (ClassInstanceCreation) parent;
 
 					Type typeNode = creation.getType();
-					if (typePar.isInterface() && gparent instanceof MethodInvocation) // method invocation follows
+					boolean invokesGetInst = false;
+
+					if (gparent instanceof MethodInvocation) // method invocation follows
 					{
 						MethodInvocation inv = (MethodInvocation) gparent;
 						IMethodBinding meth = inv.resolveMethodBinding();
 
 						if ("getMockInstance".equals(meth.getName()))
 						{
+							invokesGetInst = true;
 							if (gparent.getParent() instanceof ExpressionStatement)
 							{
 								addMarker(inv.getName(), "Returned mock instance is not being used.", false);
 							}
 						}
-						else
-						{
-							addMarker(typeNode, "Missing call to getMockInstance() on MockUp of interface",
-									false);
-						}
 					}
 
-					checkTypeParameters(typePar, typeNode);
+					if( !invokesGetInst )
+					{
+						addMarker(typeNode, "Missing call to getMockInstance() on MockUp of interface",
+								false);
+					}
+
 				}
 
 			}
@@ -259,8 +295,8 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 								&& !isReentrantMockMethod(mockMethod) )
 						{
 							addMarker( node,
-									"Method calls itself. Set @Mock(reentrant=true) on method "
-											+ mockMethod.getName(), true);
+									"Method calls itself. Set @Mock(reentrant=true) on method '"
+											+ mockMethod.getName() + "'", true);
 						}
 					}
 				}
@@ -290,12 +326,27 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 		@Override
 		public boolean visit(final FieldDeclaration node)
 		{
-			//add check: 'it' field should have the correct type
-			// it field should not be private
-			// adding fields to a  mock - warning
+			//add checks:
+			// - 'it' field should have the correct type
+			// - it field should not be private
+			// - adding other fields to a  mock - warning about shared state?
 
-			//System.out.println("field: " + node.fragments().get(0).getClass() );
-			// VariableDeclarationFragment
+//			for(Object fragment: node.fragments())
+//			{
+//				if(fragment instanceof VariableDeclarationFragment)
+//				{
+//					VariableDeclarationFragment varDec = (VariableDeclarationFragment) fragment;
+//
+//					if( "it".equals(varDec.getName().getIdentifier()) )
+//					{
+//						IVariableBinding ivar = varDec.resolveBinding();
+//
+//						if( ASTUtil.isMockUpType(ivar.getDeclaringClass().getSuperclass()) )
+//						{
+//						}
+//					}
+//				}
+//			}
 
 			return true;
 		}
@@ -320,8 +371,8 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 						name = mockedType.getName();
 					}
 
-					ITypeBinding[] parameterTypes = meth.getParameterTypes();
-					origMethod = ASTUtil.findRealMethodInType(mockedType.getErasure(), name, parameterTypes);
+					ITypeBinding[] parameterTypes = meth.getParameterTypes(); // .getErasure()
+					origMethod = ASTUtil.findRealMethodInType(mockedType, name, parameterTypes);
 				}
 
 				if (!hasMockAnn && origMethod != null)
