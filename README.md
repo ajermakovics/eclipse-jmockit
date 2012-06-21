@@ -6,6 +6,7 @@ Downloads
 --
 - v 0.1.1 [eclipse-jmockit-assist_0.1.1.jar](https://github.com/downloads/ajermakovics/eclipse-jmockit-assist/eclipse-jmockit-assist_0.1.1.jar)
 
+
 Features / Usage
 --
 * Suggests methods to be mocked
@@ -21,7 +22,9 @@ Features / Usage
 
 Installation
 --
-Copy the [plugin jar](https://github.com/downloads/ajermakovics/eclipse-jmockit-assist/eclipse-jmockit-assist_0.1.1.jar) to `eclipse/dropins` folder. Restart Eclipse.
+In Eclipse 3.7 (Indigo):
+
+ - Copy the [plugin jar](https://github.com/downloads/ajermakovics/eclipse-jmockit-assist/eclipse-jmockit-assist_0.1.1.jar) to `eclipse/dropins` folder. Restart Eclipse.
 
 There is no update site yet.
 
