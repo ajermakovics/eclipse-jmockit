@@ -13,6 +13,7 @@ package jmockit.assist.prefs;
 
 import jmockit.assist.Activator;
 
+import org.eclipse.jface.preference.BooleanFieldEditor;
 import org.eclipse.jface.preference.ComboFieldEditor;
 import org.eclipse.jface.preference.FieldEditorPreferencePage;
 import org.eclipse.ui.IWorkbench;
@@ -41,9 +42,11 @@ public final class PreferencePage extends FieldEditorPreferencePage implements I
 				{"Disabled", Prefs.CheckScope.Disabled.name()}
 		};
 
-		addField(new ComboFieldEditor(Prefs.PROP_CHECK_SCOPE, "Check scope"
-				, values , getFieldEditorParent()));
-
+		addField(new ComboFieldEditor(Prefs.PROP_CHECK_SCOPE, "Check scope",
+				values , getFieldEditorParent()));
+		
+		addField(new BooleanFieldEditor(Prefs.PROP_ADD_JAVAAGENT,
+				"Add -javaagent:jmockit.jar when running JUnit", getFieldEditorParent()));
 	}
 
 

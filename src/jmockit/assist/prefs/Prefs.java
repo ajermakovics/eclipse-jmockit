@@ -14,6 +14,8 @@ package jmockit.assist.prefs;
 public final class Prefs
 {
 	public static final String PROP_CHECK_SCOPE = "checkScope";
+	public static final String PROP_ADD_JAVAAGENT= "addJavaAgent";
+
 
 	public enum CheckScope
 	{

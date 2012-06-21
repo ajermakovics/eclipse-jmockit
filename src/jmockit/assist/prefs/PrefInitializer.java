@@ -14,6 +14,7 @@ package jmockit.assist.prefs;
 import jmockit.assist.Activator;
 
 import org.eclipse.core.runtime.preferences.AbstractPreferenceInitializer;
+import org.eclipse.jface.preference.IPreferenceStore;
 
 public final class PrefInitializer extends AbstractPreferenceInitializer
 {
@@ -24,6 +25,8 @@ public final class PrefInitializer extends AbstractPreferenceInitializer
 	@Override
 	public void initializeDefaultPreferences()
 	{
-		Activator.getPrefStore().setDefault(Prefs.PROP_CHECK_SCOPE, Prefs.CheckScope.Workspace.name());
+		IPreferenceStore prefStore = Activator.getPrefStore();
+		prefStore.setDefault(Prefs.PROP_CHECK_SCOPE, Prefs.CheckScope.Workspace.name());
+		prefStore.setDefault(Prefs.PROP_ADD_JAVAAGENT, true);
 	}
 }
