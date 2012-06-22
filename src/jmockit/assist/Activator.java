@@ -26,6 +26,8 @@ import org.eclipse.debug.core.ILaunchConfiguration;
 import org.eclipse.debug.core.ILaunchConfigurationWorkingCopy;
 import org.eclipse.debug.core.ILaunchListener;
 import org.eclipse.debug.core.ILaunchManager;
+import org.eclipse.debug.core.ILaunchesListener;
+import org.eclipse.debug.core.ILaunchesListener2;
 import org.eclipse.jdt.core.IJavaElement;
 import org.eclipse.jdt.core.IJavaModel;
 import org.eclipse.jdt.core.IJavaProject;
@@ -39,6 +41,7 @@ import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.osgi.framework.BundleContext;
 
 
+@SuppressWarnings("restriction")
 public class Activator extends AbstractUIPlugin
 {
 	public static final String VM_ARGS = "org.eclipse.jdt.launching.VM_ARGUMENTS";
@@ -70,7 +73,7 @@ public class Activator extends AbstractUIPlugin
 		Activator.context = bundleContext;
 
 		ILaunchManager launchMan = DebugPlugin.getDefault().getLaunchManager();
-		
+
 		launchMan.addLaunchListener(new ILaunchListener()
 		{
 			@Override
@@ -84,7 +87,6 @@ public class Activator extends AbstractUIPlugin
 				//System.out.println("launch changed");
 			}
 	
-			@SuppressWarnings("restriction")
 			@Override
 			public void launchAdded(ILaunch launch)
 			{
@@ -92,7 +94,7 @@ public class Activator extends AbstractUIPlugin
 				{
 					return;
 				}
-				
+
 				ILaunchConfiguration conf = launch.getLaunchConfiguration();
 				try
 				{
@@ -107,6 +109,29 @@ public class Activator extends AbstractUIPlugin
 				{
 					log(e);
 				}
+			}
+		});
+		
+		launchMan.addLaunchListener(new ILaunchesListener2()
+		{
+			@Override
+			public void launchesTerminated(ILaunch[] launches)
+			{
+			}
+
+			@Override
+			public void launchesRemoved(ILaunch[] launches)
+			{
+			}
+			
+			@Override
+			public void launchesChanged(ILaunch[] launches)
+			{
+			}
+			
+			@Override
+			public void launchesAdded(ILaunch[] launches)
+			{
 			}
 		});
 	}
@@ -133,7 +158,7 @@ public class Activator extends AbstractUIPlugin
 		
 		IType mockitType = jproj.findType("mockit.Mockit");
 		
-		if( mockitType != null && !vmargs.contains("${" + JMOCKIT_VAR + "}") )
+		if( mockitType != null  )
 		{
 			IPackageFragmentRoot root = (IPackageFragmentRoot) mockitType.getAncestor(IJavaElement.PACKAGE_FRAGMENT_ROOT);
 			
@@ -142,11 +167,13 @@ public class Activator extends AbstractUIPlugin
 				String javaagentArg = "-javaagent:"+ root.getPath().toOSString();
 				setOrCreateVariable(javaagentArg);
 
-				vmargs += " ${" + JMOCKIT_VAR + "}";
-
-				ILaunchConfigurationWorkingCopy confWc = conf.getWorkingCopy();
-				confWc.setAttribute(VM_ARGS, vmargs);
-				confWc.doSave();
+				if( !vmargs.contains("${" + JMOCKIT_VAR + "}") )
+				{
+					vmargs += " ${" + JMOCKIT_VAR + "}";
+					ILaunchConfigurationWorkingCopy confWc = conf.getWorkingCopy();
+					confWc.setAttribute(VM_ARGS, vmargs);
+					confWc.doSave();
+				}
 			}
 		}
 	}
