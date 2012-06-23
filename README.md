@@ -5,18 +5,18 @@ Eclipse plugin for JMockit
 
 Features / Usage
 --
-* Suggests methods to be mocked
+1. Suggests methods to be mocked
 	* Press Ctrl+Space inside a class extending `MockUp` or annotated with `@MockClass`. A list of mockable methods will appear.
 
 
-* Reports warnings as-you-type if mocking API is not used correctly
+2. Reports warnings as-you-type if mocking API is not used correctly
 	* No corresponding real method for mocked method
 	* Mock method calling itself but is not marked as 'reentrant'
 	* `MockUp` used with interface but missing `getMockInstance()` call
 	* Mock method missing `@Mock` annotation 
 	* and others
 
-* Automatically adds JMockit jar as `-javaagent` argument to JUnit launches. [info](http://jmockit.googlecode.com/svn/trunk/www/gettingStarted.html)
+3. Automatically adds JMockit jar as `-javaagent` argument to JUnit launches. [info](http://jmockit.googlecode.com/svn/trunk/www/gettingStarted.html)
 
 
 Installation
@@ -27,7 +27,7 @@ Using Update site:
  - https://raw.github.com/ajermakovics/jmockit-eclipse-updatesite/master
 
 Or:
- - Copy the [plugin jar](https://github.com/downloads/ajermakovics/eclipse-jmockit-assist) to `eclipse/dropins` folder. Restart Eclipse.
+ - Copy the [plugin jar](https://github.com/downloads/ajermakovics/eclipse-jmockit-assist/downloads) to `eclipse/dropins` folder. Restart Eclipse.
 
 
 License
