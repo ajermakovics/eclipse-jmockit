@@ -5,7 +5,7 @@ Eclipse plugin for JMockit
 
 Features / Usage
 --
-1. Suggests methods to be mocked [screenshot](http://cloud.github.com/downloads/ajermakovics/eclipse-jmockit-assist/jmockit_eclipse_autocomplete.png)
+1. Suggests methods to be mocked [screenshot](https://github.com/ajermakovics/eclipse-jmockit-assist/raw/gh-pages/images/jmockit_eclipse_autocomplete.png)
 	* Press Ctrl+Space inside a class extending `MockUp` or annotated with `@MockClass`. A list of mockable methods will appear.
 
 
