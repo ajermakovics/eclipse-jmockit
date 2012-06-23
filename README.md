@@ -27,7 +27,7 @@ Using Update site:
  - https://raw.github.com/ajermakovics/jmockit-eclipse-updatesite/master
 
 Or:
- - Copy the [plugin jar](https://github.com/downloads/ajermakovics/eclipse-jmockit-assist/downloads) to `eclipse/dropins` folder. Restart Eclipse.
+ - Copy the [plugin jar](http://github.com/ajermakovics/eclipse-jmockit-assist/downloads) to `eclipse/dropins` folder. Restart Eclipse.
 
 
 License

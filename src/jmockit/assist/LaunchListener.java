@@ -41,6 +41,7 @@ final class LaunchListener implements ILaunchesListener2
 {
 	public static final String VM_ARGS = "org.eclipse.jdt.launching.VM_ARGUMENTS";
 	public static final  String PROJ_ATTR = "org.eclipse.jdt.launching.PROJECT_ATTR";
+
 	public static final  String JMOCKIT_VAR_NAME = "jmockit_javaagent";
 	public static final  String JMOCKIT_VAR = "${" + JMOCKIT_VAR_NAME + "}";
 
