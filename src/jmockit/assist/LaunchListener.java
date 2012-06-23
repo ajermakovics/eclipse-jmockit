@@ -1,3 +1,14 @@
+/*
+ * Copyright (c) 2012 Andrejs Jermakovics.
+ *
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     Andrejs Jermakovics - initial implementation
+ */
 package jmockit.assist;
 
 import java.io.File;
@@ -28,11 +39,12 @@ import org.eclipse.jdt.internal.junit.JUnitCorePlugin;
 @SuppressWarnings("restriction")
 final class LaunchListener implements ILaunchesListener2
 {
-	List<ILaunch> modifiedLaunches = new ArrayList<ILaunch>();
 	public static final String VM_ARGS = "org.eclipse.jdt.launching.VM_ARGUMENTS";
 	public static final  String PROJ_ATTR = "org.eclipse.jdt.launching.PROJECT_ATTR";
 	public static final  String JMOCKIT_VAR_NAME = "jmockit_javaagent";
 	public static final  String JMOCKIT_VAR = "${" + JMOCKIT_VAR_NAME + "}";
+
+	private List<ILaunch> modifiedLaunches = new ArrayList<ILaunch>();
 
 	@Override
 	public void launchesTerminated(ILaunch[] launches)

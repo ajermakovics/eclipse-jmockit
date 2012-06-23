@@ -1,3 +1,14 @@
+/*
+ * Copyright (c) 2012 Andrejs Jermakovics.
+ *
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     Andrejs Jermakovics - initial implementation
+ */
 package jmockit.assist;
 
 import org.eclipse.jdt.core.dom.IAnnotationBinding;
@@ -10,16 +21,18 @@ import org.eclipse.jdt.core.dom.MethodInvocation;
 public class MockUtil
 {
 
-	private static final String MOCK_CLASS = "mockit.MockClass";
+	public static final String MOCK_UP = "mockit.MockUp";
+	public static final String MOCK = "mockit.Mock";
+	public static final String MOCK_CLASS = "mockit.MockClass";
 
 	public static boolean isMockMethod(final IMethodBinding meth)
 	{
-		return meth != null && ASTUtil.isAnnotationPresent(meth.getAnnotations(), "mockit.Mock");
+		return meth != null && ASTUtil.isAnnotationPresent(meth.getAnnotations(), MOCK);
 	}
 
 	public static boolean isReentrantMockMethod(final IMethodBinding meth)
 	{
-		IAnnotationBinding ann = ASTUtil.findAnnotation(meth.getAnnotations(), "mockit.Mock");
+		IAnnotationBinding ann = ASTUtil.findAnnotation(meth.getAnnotations(), MOCK);
 	
 		if( ann != null )
 		{
@@ -42,7 +55,7 @@ public class MockUtil
 
 	public static boolean isMockUpType(final ITypeBinding declaringClass)
 	{
-		return declaringClass != null && declaringClass.getQualifiedName().startsWith("mockit.MockUp");
+		return declaringClass != null && declaringClass.getQualifiedName().startsWith(MOCK_UP);
 	}
 
 	public static ITypeBinding findMockedType(final MethodInvocation node)

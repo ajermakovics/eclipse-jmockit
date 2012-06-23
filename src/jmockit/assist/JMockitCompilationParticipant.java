@@ -224,22 +224,6 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 			return true;
 		}
 
-		public void checkTypeParameters(final ITypeBinding typePar, final Type typeNode)
-		{
-			if( typePar.isParameterizedType() ) // new MockUp< Collection<String> >
-			{
-				for(ITypeBinding arg : typePar.getTypeArguments())
-				{
-					if( !"java.lang.Object".equals(arg.getQualifiedName()) && !arg.isTypeVariable() )
-					{
-						addMarker(typeNode,
-								"<" + arg.getName() + "> should be replaced with <Object>"
-								+ " or some type variable <T> in mock declaration" , false);
-					}
-				}
-			}
-		}
-
 		@Override
 		public boolean visit(final MethodInvocation node)
 		{
