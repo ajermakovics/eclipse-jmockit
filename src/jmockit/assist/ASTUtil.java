@@ -25,11 +25,9 @@ import org.eclipse.jdt.core.dom.Annotation;
 import org.eclipse.jdt.core.dom.ClassInstanceCreation;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.IAnnotationBinding;
-import org.eclipse.jdt.core.dom.IMemberValuePairBinding;
 import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
-import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.ParameterizedType;
 import org.eclipse.jdt.core.dom.Type;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
@@ -117,34 +115,6 @@ public class ASTUtil
 		return findAnnotation(annotations, annName) != null;
 	}
 
-	public static boolean isMockMethod(final IMethodBinding meth)
-	{
-		return meth != null && isAnnotationPresent(meth.getAnnotations(), "mockit.Mock");
-	}
-
-	public static boolean isReentrantMockMethod(final IMethodBinding meth)
-	{
-		IAnnotationBinding ann = findAnnotation(meth.getAnnotations(), "mockit.Mock");
-
-		if( ann != null )
-		{
-			for(IMemberValuePairBinding pair: ann.getDeclaredMemberValuePairs() )
-			{
-				if( "reentrant".equals( pair.getName()) )
-				{
-					return Boolean.valueOf(pair.getValue().toString());
-				}
-			}
-		}
-
-		return false;
-	}
-
-	public static boolean hasMockClass(final ITypeBinding type)
-	{
-		return findAnnotation(type.getAnnotations(), "mockit.MockClass") != null;
-	}
-
 	public static IAnnotationBinding findAnnotation(final IAnnotationBinding[] annotations, final String annName)
 	{
 		for(IAnnotationBinding ann: annotations)
@@ -156,29 +126,6 @@ public class ASTUtil
 		}
 
 		return null;
-	}
-
-	public static ITypeBinding findRealClassType(final ITypeBinding mockClass)
-	{
-		IAnnotationBinding ann = findAnnotation(mockClass.getAnnotations(), "mockit.MockClass");
-
-		for(IMemberValuePairBinding pair: ann.getDeclaredMemberValuePairs() )
-		{
-			if( "realClass".equals( pair.getName()) )
-			{
-				if( pair.getValue() instanceof ITypeBinding )
-				{
-					return (ITypeBinding) pair.getValue();
-				}
-			}
-		}
-
-		return null;
-	}
-
-	public static boolean isMockUpType(final ITypeBinding declaringClass)
-	{
-		return declaringClass != null && declaringClass.getQualifiedName().startsWith("mockit.MockUp");
 	}
 
 	public static CompilationUnit getAstOrParse(final ITypeRoot iTypeRoot, final IProgressMonitor mon)
@@ -221,40 +168,6 @@ public class ASTUtil
 		return (T) parent;
 	}
 
-	public static ITypeBinding findMockedType(final MethodInvocation node)
-	{
-		MethodDeclaration surroundingMeth = findAncestor(node, MethodDeclaration.class);
-
-		if( surroundingMeth != null )
-		{
-			return findMockedType(surroundingMeth, surroundingMeth.resolveBinding());
-		}
-		else
-		{
-			return null;
-		}
-	}
-
-	public static ITypeBinding findMockedType(final MethodDeclaration node, final IMethodBinding meth)
-	{
-		ITypeBinding typePar = null;
-
-		ITypeBinding declaringClass = meth.getDeclaringClass();
-
-		boolean isMockClass = hasMockClass(declaringClass);
-		boolean isMockUpType = isMockUpType(declaringClass.getSuperclass());
-
-		if (isMockUpType)
-		{
-			typePar = getFirstTypeParameter(node.getParent());
-		}
-		else if ( isMockClass )
-		{
-			typePar = findRealClassType(declaringClass);
-		}
-		return typePar;
-	}
-
 	public static IMethodBinding findMethodInType(final ITypeBinding type, final String name,
 			final ITypeBinding[] paramTypes)
 	{
@@ -267,25 +180,6 @@ public class ASTUtil
 		else
 		{
 			origMethod = Bindings.findMethodInType(type, name, paramTypes);
-		}
-
-		return origMethod;
-	}
-
-	public static IMethodBinding findRealMethodInType(final ITypeBinding type, final String name,
-			final ITypeBinding[] paramTypes)
-	{
-		IMethodBinding origMethod = findMethodInType(type, name, paramTypes);
-
-		if( origMethod == null && type.getTypeArguments().length != 0  )
-		{
-			// no method matches exactly, there could be type arguments (which we don't handle yet)
-			origMethod = findMethodInType(type, name, null); // match without params
-
-			if( origMethod != null && origMethod.getParameterTypes().length != paramTypes.length)
-			{
-				origMethod = null;
-			}
 		}
 
 		return origMethod;

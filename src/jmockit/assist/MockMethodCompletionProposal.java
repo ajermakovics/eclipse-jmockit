@@ -270,11 +270,11 @@ implements ICompletionProposalExtension4
 			TypeDeclaration typeDec = (TypeDeclaration) node;
 			ITypeBinding curType = typeDec.resolveBinding();
 
-			if( ASTUtil.hasMockClass(curType) )
+			if( MockUtil.hasMockClass(curType) )
 			{
-				declaringType = ASTUtil.findRealClassType(curType);
+				declaringType = MockUtil.findRealClassType(curType);
 			}
-			else if( ASTUtil.isMockUpType(curType.getSuperclass()) )
+			else if( MockUtil.isMockUpType(curType.getSuperclass()) )
 			{
 				declaringType = ASTUtil.getFirstTypeParam(typeDec.getSuperclassType());
 			}

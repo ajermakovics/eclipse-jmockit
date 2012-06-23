@@ -11,10 +11,6 @@
  */
 package jmockit.assist;
 
-import static jmockit.assist.ASTUtil.findMockedType;
-import static jmockit.assist.ASTUtil.isMockMethod;
-import static jmockit.assist.ASTUtil.isMockUpType;
-import static jmockit.assist.ASTUtil.isReentrantMockMethod;
 import static org.eclipse.jdt.core.dom.Modifier.isPrivate;
 
 import java.util.ArrayList;
@@ -187,7 +183,7 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 		{
 			ITypeBinding binding = node.resolveBinding();
 
-			if (ASTUtil.isMockUpType(binding.getSuperclass())) // new MockUp< type >
+			if (MockUtil.isMockUpType(binding.getSuperclass())) // new MockUp< type >
 			{
 				ITypeBinding typePar = ASTUtil.getFirstTypeParameter(node);
 				ASTNode parent = node.getParent();
@@ -254,7 +250,7 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 				return true;
 			}
 
-			if ( isMockUpType(meth.getDeclaringClass()) && "getMockInstance".equals(meth.getName()))
+			if ( MockUtil.isMockUpType(meth.getDeclaringClass()) && "getMockInstance".equals(meth.getName()))
 			{
 				ITypeBinding returnType = node.resolveTypeBinding();
 
@@ -289,10 +285,10 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 					if( mockMethod != null && varBinding.isField() && mockMethod.isSubsignature(meth)
 							&& varBinding.getDeclaringClass().equals(mockMethod.getDeclaringClass()) )
 					{
-						ITypeBinding mockedType = findMockedType(node);
+						ITypeBinding mockedType = MockUtil.findMockedType(node);
 
 						if( mockedType.equals(varBinding.getType()) // field type is correct mocked type
-								&& !isReentrantMockMethod(mockMethod) )
+								&& !MockUtil.isReentrantMockMethod(mockMethod) )
 						{
 							addMarker( node,
 									"Method calls itself. Set @Mock(reentrant=true) on method '"
@@ -313,7 +309,7 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 				mockMethod = surroundingMeth.resolveBinding();
 			}
 
-			if( mockMethod != null && isMockMethod(mockMethod) )
+			if( mockMethod != null && MockUtil.isMockMethod(mockMethod) )
 			{
 				return mockMethod;
 			}
@@ -355,11 +351,11 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 		public boolean visit(final MethodDeclaration node)
 		{
 			IMethodBinding meth = node.resolveBinding();
-			ITypeBinding mockedType = ASTUtil.findMockedType(node, meth); // new MockUp< MockedType >
+			ITypeBinding mockedType = MockUtil.findMockedType(node, meth); // new MockUp< MockedType >
 
 			if ( mockedType != null )
 			{
-				boolean hasMockAnn = ASTUtil.isMockMethod(meth);
+				boolean hasMockAnn = MockUtil.isMockMethod(meth);
 				IMethodBinding origMethod = null;
 
 				if (mockedType != null)
@@ -372,7 +368,7 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 					}
 
 					ITypeBinding[] parameterTypes = meth.getParameterTypes(); // .getErasure()
-					origMethod = ASTUtil.findRealMethodInType(mockedType, name, parameterTypes);
+					origMethod = MockUtil.findRealMethodInType(mockedType, name, parameterTypes);
 				}
 
 				if (!hasMockAnn && origMethod != null)

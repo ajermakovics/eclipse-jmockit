@@ -72,7 +72,7 @@ public class JmockitProposalComputer implements IJavaCompletionProposalComputer,
 		IType mockType = null, paramType = null;
 		ICompilationUnit cunit = null;
 		Set<String> existingMethods = new HashSet<String>();
-
+		
 		if (context instanceof JavaContentAssistInvocationContext)
 		{
 			JavaContentAssistInvocationContext jcontext = (JavaContentAssistInvocationContext) context;
@@ -84,6 +84,8 @@ public class JmockitProposalComputer implements IJavaCompletionProposalComputer,
 
 				if (cunit != null)
 				{
+					//CompilationUnit ast = SharedASTProvider.getAST(cunit, SharedASTProvider.WAIT_ACTIVE_ONLY, mon);
+					
 					try
 					{
 						if( objectMethods == null )
@@ -303,7 +305,7 @@ public class JmockitProposalComputer implements IJavaCompletionProposalComputer,
 		return proposal;
 	}
 
-	private static Collection<IMethod> getAllMethods(final IType paramType, final IProgressMonitor pm)
+	public static Collection<IMethod> getAllMethods(final IType paramType, final IProgressMonitor pm)
 			throws JavaModelException
 	{
 		List<IMethod> methods = new ArrayList<IMethod>();
@@ -364,14 +366,14 @@ public class JmockitProposalComputer implements IJavaCompletionProposalComputer,
 		return params;
 	}
 
-	private static Set<String> getObjectMethods(final IJavaProject jproj) throws JavaModelException
+	public static Set<String> getObjectMethods(final IJavaProject jproj) throws JavaModelException
 	{
 		IType objType = jproj.findType("java.lang.Object");
 
 		return getTypeMethods(objType);
 	}
 
-	private static Set<String> getTypeMethods(final IType objType) throws JavaModelException
+	public static Set<String> getTypeMethods(final IType objType) throws JavaModelException
 	{
 		Set<String> methods = new TreeSet<String>();
 
