@@ -11,13 +11,20 @@
  */
 package jmockit.assist;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 
 import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.jdt.core.IJavaProject;
-import org.eclipse.jdt.core.IType;
 import org.eclipse.jdt.core.ITypeRoot;
 import org.eclipse.jdt.core.JavaCore;
+import org.eclipse.jdt.core.JavaModelException;
 import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTParser;
@@ -39,23 +46,6 @@ import org.eclipse.jdt.ui.SharedASTProvider;
 @SuppressWarnings("restriction")
 public class ASTUtil
 {
-
-	public static void resolveParameterTypes(final String[] paramTypes, final IType declaringType)
-	{
-		for(int i = 0; i < paramTypes.length; i++)
-		{
-			try
-			{
-				String resTypeName = JavaModelUtil.getResolvedTypeName(paramTypes[i], declaringType);
-				paramTypes[i] = Util.firstNonNull(resTypeName, paramTypes[i]);
-			}
-			catch(Exception e)
-			{
-				Activator.log(e);
-			}
-		}
-	}
-
 	public static ITypeBinding getFirstTypeParameter(final ASTNode node)
 	{
 		ITypeBinding declaringType = null;
@@ -130,7 +120,7 @@ public class ASTUtil
 
 	public static CompilationUnit getAstOrParse(final ITypeRoot iTypeRoot, final IProgressMonitor mon)
 	{
-		CompilationUnit cu = SharedASTProvider.getAST(iTypeRoot, SharedASTProvider.WAIT_ACTIVE_ONLY, mon);
+		CompilationUnit cu = SharedASTProvider.getAST(iTypeRoot, SharedASTProvider.WAIT_NO, mon);
 
 		if( cu == null )
 		{
@@ -142,8 +132,6 @@ public class ASTUtil
 
 	public static CompilationUnit parse(final ITypeRoot unit, final IProgressMonitor mon)
 	{
-		//System.err.println(" - - - Parsing " + unit.getElementName());
-
 		ASTParser parser = ASTParser.newParser(AST.JLS3);
 		parser.setKind(ASTParser.K_COMPILATION_UNIT);
 		parser.setSource(unit);
@@ -183,5 +171,52 @@ public class ASTUtil
 		}
 
 		return origMethod;
+	}
+
+	public static Set<String> getMethodSignatures(final ITypeBinding objType) throws JavaModelException
+	{
+		Set<String> methods = new TreeSet<String>();
+
+		for(IMethodBinding m: objType.getDeclaredMethods() )
+		{
+			methods.add( getSig(m) );
+		}
+
+		return methods;
+	}
+
+	public static String getSig(final IMethodBinding m) throws JavaModelException
+	{
+		String sig = m.getKey().split(";", 2)[1]; // remove declaring type
+		return m.getName() +  sig;
+	}
+
+	public static Collection<IMethodBinding> getAllMethods(final ITypeBinding paramType)
+			throws JavaModelException
+	{
+		List<IMethodBinding> methods = new ArrayList<IMethodBinding>();
+		methods.addAll(Arrays.asList( paramType.getDeclaredMethods() ) );
+
+		if( paramType.isInterface() )
+		{
+			for(ITypeBinding superType: Bindings.getAllSuperTypes(paramType))
+			{
+				if( !Object.class.getName().equals(superType.getQualifiedName()) )
+				{
+					methods.addAll( Arrays.asList(superType.getDeclaredMethods()) );
+				}
+			}
+		}
+
+		Collections.sort(methods, new Comparator<IMethodBinding>()
+		{
+			@Override
+			public int compare(final IMethodBinding m1, final IMethodBinding m2)
+			{
+				return m1.getName().compareTo( m2.getName() );
+			}
+		});
+
+		return methods;
 	}
 }

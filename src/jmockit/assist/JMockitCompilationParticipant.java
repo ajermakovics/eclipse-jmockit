@@ -20,6 +20,7 @@ import jmockit.assist.prefs.Prefs;
 import jmockit.assist.prefs.Prefs.CheckScope;
 
 import org.eclipse.core.resources.IFile;
+import org.eclipse.core.resources.IResource;
 import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.core.IType;
@@ -55,6 +56,8 @@ import org.eclipse.jdt.internal.compiler.problem.ProblemSeverities;
  */
 public final class JMockitCompilationParticipant extends CompilationParticipant
 {
+	public static final String MARKER = "jmockit.eclipse.marker";
+
 	public JMockitCompilationParticipant()
 	{
 	}
@@ -62,14 +65,36 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 	@Override
 	public void buildStarting(final BuildContext[] files, final boolean isBatch)
 	{
-		if( getCheckScope() != CheckScope.Workspace )
+		CheckScope scope = getCheckScope();
+		if( scope == CheckScope.Disabled )
 		{
 			return;
+		}
+
+		IResource res = Activator.getActiveResource();
+		String activeProj = null;
+		if( res != null )
+		{
+			activeProj = res.getProject().getName();
 		}
 
 		for (BuildContext f : files)
 		{
 			IFile file = f.getFile();
+
+			if( (scope == CheckScope.Project || scope == CheckScope.File )
+					&& !file.getProject().getName().equals(activeProj))
+			{
+				continue;
+			}
+
+			if( scope == CheckScope.File )
+			{
+				if( res == null || !file.equals(res) )
+				{
+					continue;
+				}
+			}
 
 			ICompilationUnit cunit = JavaCore.createCompilationUnitFrom(file);
 			if (cunit != null)
@@ -101,7 +126,17 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 	@Override
 	public boolean isActive(final IJavaProject project)
 	{
-		if( getCheckScope() == CheckScope.Disabled )
+		CheckScope checkScope = getCheckScope();
+
+		if( checkScope == CheckScope.Disabled )
+		{
+			return false;
+		}
+
+		String activeProj = Activator.getActiveProject();
+
+		if( (checkScope == CheckScope.Project || checkScope == CheckScope.File )
+				&& !project.getProject().getName().equals(activeProj) )
 		{
 			return false;
 		}
@@ -109,7 +144,7 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 		IType mockitType = null;
 		try
 		{
-			mockitType = project.findType("mockit.Mockit");
+			mockitType = project.findType(MockUtil.MOCKIT);
 		}
 		catch (JavaModelException e)
 		{
@@ -144,7 +179,6 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 			Activator.log(e);
 		}
 	}
-
 	public static final class MockASTVisitor extends ASTVisitor
 	{
 		private final ICompilationUnit icunit;
@@ -162,20 +196,6 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 		{
 			cu = node;
 			return true;
-		}
-
-		@Override
-		public boolean visit(final TypeDeclaration node)
-		{
-//			ITypeBinding binding = node.resolveBinding();
-//
-//			if (ASTUtil.isMockUpType(binding.getSuperclass()))
-//			{
-//				ITypeBinding typePar = ASTUtil.getFirstTypeParameter(node);
-//				checkTypeParameters(typePar, node.getSuperclassType());
-//			}
-
-			return super.visit(node);
 		}
 
 		@Override
@@ -201,7 +221,7 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 						MethodInvocation inv = (MethodInvocation) gparent;
 						IMethodBinding meth = inv.resolveMethodBinding();
 
-						if ("getMockInstance".equals(meth.getName()))
+						if ( MockUtil.GET_INST.equals(meth.getName()))
 						{
 							invokesGetInst = true;
 							if (gparent.getParent() instanceof ExpressionStatement)
@@ -234,7 +254,7 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 				return true;
 			}
 
-			if ( MockUtil.isMockUpType(meth.getDeclaringClass()) && "getMockInstance".equals(meth.getName()))
+			if ( MockUtil.isMockUpType(meth.getDeclaringClass()) && MockUtil.GET_INST.equals(meth.getName()))
 			{
 				ITypeBinding returnType = node.resolveTypeBinding();
 
@@ -346,7 +366,7 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 				{
 					String name = meth.getName();
 
-					if ("$init".equals(name)) // constructor
+					if ( MockUtil.CTOR.equals(name)) // constructor
 					{
 						name = mockedType.getName();
 					}
@@ -374,6 +394,12 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 			return true;
 		}
 
+		@Override
+		public boolean visit(final TypeDeclaration node)
+		{
+			return super.visit(node);
+		}
+
 		private void addMarker(final ASTNode node, final String msg, final boolean isError)
 		{
 			try
@@ -383,17 +409,18 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 				int line = cu.getLineNumber(start);
 				int col = cu.getColumnNumber(start);
 				int id = IProblem.TypeRelated;
+				String filePath = icunit.getPath().toOSString();
+				String[] args = new String[]{};
 
 				int severity = isError ? ProblemSeverities.Error : ProblemSeverities.Warning;
 
-				CategorizedProblem problem = new DefaultProblem(icunit.getPath().toOSString().toCharArray(), msg, id,
-						new String[]
-						{}, severity, start, endChar, line, col)
+				CategorizedProblem problem = new DefaultProblem(filePath.toCharArray(), msg, id,
+						args, severity, start, endChar, line, col)
 				{
 					@Override
 					public String getMarkerType()
 					{
-						return "jmockit.eclipse.marker";
+						return MARKER;
 					}
 				};
 
@@ -407,8 +434,7 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 
 		public CategorizedProblem[] getProblems()
 		{
-			return probs.toArray(new CategorizedProblem[]
-			{});
+			return probs.toArray(new CategorizedProblem[]{});
 		}
 
 	}

@@ -11,32 +11,27 @@
  */
 package jmockit.assist;
 
+import static jmockit.assist.MockUtil.findMockedTypeFromNode;
 import static org.eclipse.jface.viewers.StyledString.QUALIFIER_STYLER;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.TreeSet;
 
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IProgressMonitor;
-import org.eclipse.jdt.core.CompletionContext;
-import org.eclipse.jdt.core.IAnnotation;
 import org.eclipse.jdt.core.ICompilationUnit;
-import org.eclipse.jdt.core.IField;
-import org.eclipse.jdt.core.IJavaElement;
-import org.eclipse.jdt.core.IJavaProject;
-import org.eclipse.jdt.core.IMemberValuePair;
 import org.eclipse.jdt.core.IMethod;
-import org.eclipse.jdt.core.IType;
 import org.eclipse.jdt.core.JavaModelException;
-import org.eclipse.jdt.core.Signature;
-import org.eclipse.jdt.internal.corext.util.JavaModelUtil;
+import org.eclipse.jdt.core.dom.ASTNode;
+import org.eclipse.jdt.core.dom.AnonymousClassDeclaration;
+import org.eclipse.jdt.core.dom.IMethodBinding;
+import org.eclipse.jdt.core.dom.ITypeBinding;
+import org.eclipse.jdt.core.dom.IVariableBinding;
+import org.eclipse.jdt.core.dom.NodeFinder;
+import org.eclipse.jdt.core.dom.TypeDeclaration;
 import org.eclipse.jdt.internal.ui.JavaPluginImages;
 import org.eclipse.jdt.internal.ui.text.java.JavaCompletionProposal;
 import org.eclipse.jdt.ui.text.java.ContentAssistInvocationContext;
@@ -59,7 +54,6 @@ import org.eclipse.swt.graphics.Image;
 public class JmockitProposalComputer implements IJavaCompletionProposalComputer, IQuickAssistProcessor
 {
 	private String fErrorMessage;
-	private Set<String> objectMethods = new HashSet<String>();
 
 	public JmockitProposalComputer()
 	{//
@@ -69,39 +63,19 @@ public class JmockitProposalComputer implements IJavaCompletionProposalComputer,
 	public final List<ICompletionProposal> computeCompletionProposals(final ContentAssistInvocationContext context,
 			final IProgressMonitor mon)
 	{
-		IType mockType = null, paramType = null;
-		ICompilationUnit cunit = null;
-		Set<String> existingMethods = new HashSet<String>();
-		
-		if (context instanceof JavaContentAssistInvocationContext)
+		ITypeBinding mockType = null, paramType = null;
+		ICompilationUnit cunit = getCompilationUnit(context);
+
+		if (cunit != null)
 		{
-			JavaContentAssistInvocationContext jcontext = (JavaContentAssistInvocationContext) context;
-			CompletionContext corecontext = jcontext.getCoreContext();
+			ASTNode astRoot = ASTUtil.getAstOrParse(cunit, mon);
 
-			if (corecontext != null)
+			if( astRoot != null )
 			{
-				cunit = jcontext.getCompilationUnit();
+				ASTNode node = NodeFinder.perform(astRoot, context.getInvocationOffset(), 1);
 
-				if (cunit != null)
-				{
-					//CompilationUnit ast = SharedASTProvider.getAST(cunit, SharedASTProvider.WAIT_ACTIVE_ONLY, mon);
-					
-					try
-					{
-						if( objectMethods == null )
-						{
-							objectMethods = getObjectMethods(jcontext.getProject());
-						}
-
-						mockType = findMockType(cunit, jcontext );
-						paramType = findMockedType(cunit, mockType);
-					}
-					catch (Exception e)
-					{
-						fErrorMessage = e.getMessage();
-						Activator.log(e);
-					}
-				}
+				mockType = getMockType(node);
+				paramType = findMockedTypeFromNode(node);
 			}
 		}
 
@@ -109,10 +83,7 @@ public class JmockitProposalComputer implements IJavaCompletionProposalComputer,
 		{
 			try
 			{
-				existingMethods.addAll( getTypeMethods(mockType) );
-				existingMethods.removeAll(objectMethods);
-
-				return getProposals(context, paramType, cunit, existingMethods, mon, mockType);
+				return getProposals(context, paramType, cunit, mockType);
 			}
 			catch (Exception e)
 			{
@@ -124,114 +95,58 @@ public class JmockitProposalComputer implements IJavaCompletionProposalComputer,
 		return Collections.emptyList();
 	}
 
-	private IType findMockType(final ICompilationUnit cunit,
-			final JavaContentAssistInvocationContext jcontext)
-					throws JavaModelException
+	private static ITypeBinding getMockType(final ASTNode node)
 	{
-		IType paramType = null;
-		IJavaElement element = cunit.getElementAt(jcontext.getInvocationOffset());
+		ITypeBinding mockType = null;
 
-		if (element != null && element.getElementType() == IJavaElement.TYPE)
+		if (node instanceof AnonymousClassDeclaration)
 		{
-			IType mockType = (IType) element;
-
-			paramType = mockType;
+			mockType = ((AnonymousClassDeclaration) node).resolveBinding();
 		}
-
-		return paramType;
+		else if( node instanceof TypeDeclaration )
+		{
+			mockType = ((TypeDeclaration) node).resolveBinding();
+		}
+		return mockType;
 	}
 
-	private IType findMockedType(final ICompilationUnit cunit,
-			final IType mockType) throws JavaModelException
+	public final ICompilationUnit getCompilationUnit(final ContentAssistInvocationContext context)
 	{
-		IType paramType = null;
-
-		if ( mockType != null && mockType.getSuperclassName() != null)
+		ICompilationUnit cunit = null;
+		if (context instanceof JavaContentAssistInvocationContext)
 		{
-			String superclassTypeSignature = mockType.getSuperclassTypeSignature();
-			String resolvedTypeName = JavaModelUtil.getResolvedTypeName(superclassTypeSignature, mockType);
-			String[] typeParamSig = Signature.getTypeArguments(superclassTypeSignature);
+			JavaContentAssistInvocationContext jcontext = (JavaContentAssistInvocationContext) context;
 
-			if ( "mockit.MockUp".equals(resolvedTypeName) && typeParamSig.length != 0 )
+			if (jcontext.getCoreContext() != null)
 			{
-				String typeParam = typeParamSig[0];
-				String resolvedTypeParam = JavaModelUtil.getResolvedTypeName(typeParam, mockType);
-
-				if( resolvedTypeParam != null )
-				{
-					paramType = cunit.getJavaProject().findType(resolvedTypeParam);
-				}
-			}
-
-		}
-
-		if( paramType == null && mockType != null )
-		{
-			paramType = findMockAnnotationType(cunit, mockType);
-		}
-
-		return paramType;
-	}
-
-	private IType findMockAnnotationType(final ICompilationUnit cunit, final IType itype)
-			throws JavaModelException
-	{
-		IType paramType = null;
-		IAnnotation[] annotations = itype.getAnnotations();
-
-		for(IAnnotation annot: annotations)
-		{
-			if( "MockClass".equals( annot.getElementName()) )
-			{
-				for(IMemberValuePair pair : annot.getMemberValuePairs())
-				{
-					if( "realClass".equals( pair.getMemberName() ) )
-					{
-						Object value = pair.getValue();
-						String className = value.toString();
-
-						String[][] resolvedTypes = itype.resolveType(className);
-
-						if( resolvedTypes == null )
-						{
-							resolvedTypes = itype.resolveType(className);
-						}
-
-						if( resolvedTypes != null && resolvedTypes.length != 0 )
-						{
-							String fullType = JavaModelUtil.concatenateName(resolvedTypes[0][0], resolvedTypes[0][1]);
-							paramType = cunit.getJavaProject().findType( fullType );
-						}
-					}
-				}
+				cunit = jcontext.getCompilationUnit();
 			}
 		}
-		return paramType;
+		return cunit;
 	}
 
-	private List<ICompletionProposal> getProposals(final ContentAssistInvocationContext context, final IType paramType,
-			final ICompilationUnit cunit, final Set<String> existingMethods,
-			final IProgressMonitor pm, final IType mockType)
+	private List<ICompletionProposal> getProposals(final ContentAssistInvocationContext context,
+			final ITypeBinding paramType,
+			final ICompilationUnit cunit, final ITypeBinding mockType)
 					throws JavaModelException, BadLocationException
 	{
 		Collection<IJavaCompletionProposal> list = new ArrayList<IJavaCompletionProposal>();
 		String prefix = context.computeIdentifierPrefix().toString();
+		Set<String> existingMethods = ASTUtil.getMethodSignatures(mockType);
 
 		addItFieldProposal(context, paramType, mockType, list, prefix);
 
-		for (final IMethod meth : getAllMethods(paramType, pm) )
+		for (final IMethodBinding meth : ASTUtil.getAllMethods(paramType) )
 		{
-			String methodName = meth.getElementName();
-			String methSig = methodName+ meth.getSignature();
+			String methodName = meth.getName();
 
-			if( objectMethods.contains(methSig)
-					|| !methodName.startsWith(prefix)
-					|| "<clinit>".equals(methodName) )
+			if( !methodName.startsWith(prefix) || "<clinit>".equals(methodName) )
 			{
 				continue;
 			}
 
-			methodName = meth.isConstructor()  ? "$init" : meth.getElementName();
+			String methSig = ASTUtil.getSig(meth);
+			methodName = meth.isConstructor()  ? MockUtil.CTOR : meth.getName();
 			if( existingMethods.contains(methSig) )
 			{
 				continue;
@@ -252,16 +167,16 @@ public class JmockitProposalComputer implements IJavaCompletionProposalComputer,
 		}
 
 		return new ArrayList<ICompletionProposal>(list);
-	}
+					}
 
-	private void addItFieldProposal(final ContentAssistInvocationContext context, final IType paramType,
-			final IType mockType, final Collection<IJavaCompletionProposal> list, final String prefix)
+	private void addItFieldProposal(final ContentAssistInvocationContext context, final ITypeBinding paramType,
+			final ITypeBinding mockType, final Collection<IJavaCompletionProposal> list, final String prefix)
 					throws JavaModelException
-	{
+					{
 		boolean hasItField = false;
-		for(IField field : mockType.getFields())
+		for(IVariableBinding field : mockType.getDeclaredFields())
 		{
-			if( field.getElementName().equals("it") )
+			if( "it".equals( field.getName() ) )
 			{
 				hasItField = true;
 				break;
@@ -270,11 +185,12 @@ public class JmockitProposalComputer implements IJavaCompletionProposalComputer,
 
 		if( !hasItField && "it".startsWith(prefix) )
 		{
-			String relpacement = paramType.getElementName() + " it;";
+			String relpacement = paramType.getName() + " it;";
 			Image image = JavaPluginImages.get(JavaPluginImages.IMG_FIELD_DEFAULT);
-			StyledString displayName = new StyledString("it : " + paramType.getElementName());
+
+			StyledString displayName = new StyledString("it : " + paramType.getName());
 			displayName.append(" - Access the mocked object 'it' of type '"
-					+ paramType.getElementName() +"'", QUALIFIER_STYLER);
+					+ paramType.getName() +"'", QUALIFIER_STYLER);
 
 			IJavaCompletionProposal proposal
 			= new JavaCompletionProposal(relpacement, context.getInvocationOffset()-prefix.length(), prefix.length(),
@@ -284,19 +200,20 @@ public class JmockitProposalComputer implements IJavaCompletionProposalComputer,
 	}
 
 	private MockMethodCompletionProposal createMockMethodProposal(final ContentAssistInvocationContext context,
-			final IType paramType, final ICompilationUnit cunit,
-			final String prefix, final IMethod meth, final String methodName)
-			throws JavaModelException
+			final ITypeBinding paramType, final ICompilationUnit cunit,
+			final String prefix, final IMethodBinding meth, final String methodName) throws JavaModelException
 	{
 		String params = getParameters(meth);
 
 		StyledString displayName = new StyledString(methodName
-				+ "(" + params + ") : " + Signature.getSimpleName(Signature.toString(meth.getReturnType())));
+				+ "(" + params + ") : " + meth.getReturnType().getName() );
 
 		String desc = meth.isConstructor() ? "constructor" : "method";
+
 		displayName.append(" - Mock " + desc + " of '"
-				+ paramType.getElementName() +"'", QUALIFIER_STYLER);
-		String completionProposal = Signature.toString(meth.getReturnType()) + " " + methodName;
+				+ paramType.getName() +"'", QUALIFIER_STYLER);
+
+		String completionProposal = meth.getReturnType().getName() + " " + methodName;
 
 		MockMethodCompletionProposal proposal = new MockMethodCompletionProposal(cunit, meth,
 				context.getInvocationOffset()-prefix.length(), prefix.length(), displayName,
@@ -305,46 +222,17 @@ public class JmockitProposalComputer implements IJavaCompletionProposalComputer,
 		return proposal;
 	}
 
-	public static Collection<IMethod> getAllMethods(final IType paramType, final IProgressMonitor pm)
-			throws JavaModelException
+	private String getParameters(final IMethodBinding methBinding) throws JavaModelException
 	{
-		List<IMethod> methods = new ArrayList<IMethod>();
-		methods.addAll(Arrays.asList( paramType.getMethods() ) );
-
-		if( paramType.isInterface() )
-		{
-			for(IType superType: JavaModelUtil.getAllSuperTypes(paramType, pm) )
-			{
-				if( !"java.lang.Object".equals(superType.getFullyQualifiedName()) )
-				{
-					methods.addAll( Arrays.asList(superType.getMethods()) );
-				}
-			}
-
-		}
-
-		Collections.sort(methods, new Comparator<IMethod>()
-		{
-				@Override
-				public int compare(final IMethod o1, final IMethod o2)
-				{
-					return o1.getElementName().compareTo( o2.getElementName() );
-				}
-		});
-
-		return methods;
-	}
-
-	private String getParameters(final IMethod meth) throws JavaModelException
-	{
+		IMethod meth = (IMethod) methBinding.getJavaElement();
 		String[] paramNames = meth.getParameterNames();
 
 		String params= "";
-		String[] paramTypes = meth.getParameterTypes();
+		ITypeBinding[] paramTypes = methBinding.getParameterTypes();
 
 		for(int i = 0; i < paramTypes.length; i++)
 		{
-			String par = paramTypes[i];
+			String par = paramTypes[i].getName();
 			if( i != 0 )
 			{
 				params += ", ";
@@ -352,7 +240,7 @@ public class JmockitProposalComputer implements IJavaCompletionProposalComputer,
 
 			try
 			{
-				params += Signature.getSimpleName( Signature.toString(par) );
+				params += par; //Signature.getSimpleName( Signature.toString(par) );
 			}
 			catch(Exception e)
 			{
@@ -366,24 +254,12 @@ public class JmockitProposalComputer implements IJavaCompletionProposalComputer,
 		return params;
 	}
 
-	public static Set<String> getObjectMethods(final IJavaProject jproj) throws JavaModelException
-	{
-		IType objType = jproj.findType("java.lang.Object");
-
-		return getTypeMethods(objType);
-	}
-
-	public static Set<String> getTypeMethods(final IType objType) throws JavaModelException
-	{
-		Set<String> methods = new TreeSet<String>();
-
-		for(IMethod m: objType.getMethods() )
-		{
-			methods.add(m.getElementName() + m.getSignature() );
-		}
-
-		return methods;
-	}
+//	public static Set<String> getObjectMethods(final IJavaProject jproj) throws JavaModelException
+//	{
+//		IType objType = jproj.findType("java.lang.Object");
+//
+//		return getTypeMethods(objType);
+//	}
 
 	@Override
 	public final List<IContextInformation> computeContextInformation(final ContentAssistInvocationContext ctx,
@@ -411,14 +287,16 @@ public class JmockitProposalComputer implements IJavaCompletionProposalComputer,
 	@Override
 	public final boolean hasAssists(final IInvocationContext context) throws CoreException
 	{
+		//System.err.println("has assist? ");
 		return false;
 	}
 
 	@Override
 	public final IJavaCompletionProposal[] getAssists(final IInvocationContext context,
 			final IProblemLocation[] locations)
-			throws CoreException
+					throws CoreException
 	{
+		//System.err.println("get assist");
 		return new IJavaCompletionProposal[]{};
 	}
 }

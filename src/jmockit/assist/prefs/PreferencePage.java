@@ -39,12 +39,13 @@ public final class PreferencePage extends FieldEditorPreferencePage implements I
 		String[][] values = new String[][] {
 				{"Workspace", Prefs.CheckScope.Workspace.name()},
 				{"Current file", Prefs.CheckScope.File.name()},
+				{"Current project", Prefs.CheckScope.Project.name()},
 				{"Disabled", Prefs.CheckScope.Disabled.name()}
 		};
 
 		addField(new ComboFieldEditor(Prefs.PROP_CHECK_SCOPE, "Check scope",
 				values , getFieldEditorParent()));
-		
+
 		addField(new BooleanFieldEditor(Prefs.PROP_ADD_JAVAAGENT,
 				"Add -javaagent:jmockit.jar when running JUnit", getFieldEditorParent()));
 	}

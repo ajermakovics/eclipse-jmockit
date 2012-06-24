@@ -13,11 +13,19 @@ package jmockit.assist;
 
 
 
+import java.util.concurrent.atomic.AtomicReference;
+
+import org.eclipse.core.resources.IProject;
+import org.eclipse.core.resources.IResource;
+import org.eclipse.core.runtime.IAdaptable;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 import org.eclipse.debug.core.DebugPlugin;
 import org.eclipse.debug.core.ILaunchManager;
 import org.eclipse.jface.preference.IPreferenceStore;
+import org.eclipse.ui.IEditorPart;
+import org.eclipse.ui.IWorkbenchPage;
+import org.eclipse.ui.IWorkbenchWindow;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.osgi.framework.BundleContext;
 
@@ -28,8 +36,8 @@ public class Activator extends AbstractUIPlugin
 	private static BundleContext context;
 	private static Activator plugin;
 
-	private final LaunchListener launchListener = new LaunchListener();
-	
+	private final JunitLaunchListener launchListener = new JunitLaunchListener();
+
 	static BundleContext getContext()
 	{
 		return context;
@@ -52,7 +60,7 @@ public class Activator extends AbstractUIPlugin
 		Activator.context = bundleContext;
 
 		ILaunchManager launchMan = DebugPlugin.getDefault().getLaunchManager();
-		
+
 		launchMan.addLaunchListener(launchListener);
 	}
 
@@ -66,7 +74,7 @@ public class Activator extends AbstractUIPlugin
 	{
 		super.stop(bundleContext);
 		Activator.context = null;
-		
+
 		DebugPlugin.getDefault().getLaunchManager().removeLaunchListener(launchListener);
 	}
 
@@ -88,4 +96,80 @@ public class Activator extends AbstractUIPlugin
 		return plugin.getPreferenceStore();
 	}
 
+	public static String getActiveProject()
+	{
+		IResource resource = getActiveResource();
+
+		IProject project = null;
+
+		if (resource != null)
+		{
+			project = resource.getProject();
+		}
+//		else
+//		{
+//			project = (IProject) adaptable.getAdapter(IProject.class);
+//		}
+
+		if (project != null && project.isAccessible())
+		{
+			return project.getName();
+		}
+
+		return null;
+	}
+
+	public static IResource getActiveResource()
+	{
+		final AtomicReference<IEditorPart> editorRef = new AtomicReference<IEditorPart>();
+		plugin.getWorkbench().getDisplay().syncExec(new Runnable()
+		{
+			@Override
+			public void run()
+			{
+				editorRef.set(getActiveEditor());
+			}
+		});
+
+		IEditorPart editor = editorRef.get();
+
+		if( editor == null )
+		{
+			return null;
+		}
+
+		IAdaptable adaptable = editor.getEditorInput();
+		IResource resource = (IResource) adaptable.getAdapter(IResource.class);
+
+		return resource;
+	}
+
+	/**
+	 * Gets active editor
+	 * Must be run from UI thread
+	 *
+	 * @return IEditorPart
+	 */
+	public static IEditorPart getActiveEditor()
+	{
+		if( getWorkbenchWindow() == null )
+		{
+			return null;
+		}
+
+		IWorkbenchPage activePage= getWorkbenchWindow().getActivePage();
+		if (activePage != null)
+		{
+			IEditorPart activeEditor= activePage.getActiveEditor();
+
+			return activeEditor;
+		}
+
+		return null;
+	}
+
+	public static IWorkbenchWindow getWorkbenchWindow()
+	{
+		return plugin.getWorkbench().getActiveWorkbenchWindow();
+	}
 }
