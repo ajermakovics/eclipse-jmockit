@@ -63,6 +63,12 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 	}
 
 	@Override
+	public void buildFinished(final IJavaProject project)
+	{
+		System.err.println("build finished");
+	}
+
+	@Override
 	public void buildStarting(final BuildContext[] files, final boolean isBatch)
 	{
 		CheckScope scope = getCheckScope();
@@ -97,13 +103,21 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 			}
 
 			ICompilationUnit cunit = JavaCore.createCompilationUnitFrom(file);
-			if (cunit != null)
-			{
-				CompilationUnit cu = ASTUtil.getAstOrParse(cunit, null);
 
-				MockASTVisitor visitor = new MockASTVisitor(cunit);
-				cu.accept(visitor);
-				f.recordNewProblems(visitor.getProblems());
+			try
+			{
+				if (cunit != null && cunit.isStructureKnown() )
+				{
+					CompilationUnit cu = ASTUtil.getAstOrParse(cunit, null);
+
+					MockASTVisitor visitor = new MockASTVisitor(cunit);
+					cu.accept(visitor);
+					f.recordNewProblems(visitor.getProblems());
+				}
+			}
+			catch (JavaModelException e)
+			{
+				Activator.log(e);
 			}
 		}
 	}
@@ -199,49 +213,104 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 		}
 
 		@Override
+		public boolean visit(final MethodDeclaration node)
+		{
+			IMethodBinding meth = node.resolveBinding();
+			ITypeBinding mockedType = MockUtil.findMockedType(node, meth); // new MockUp< MockedType >
+
+			if ( mockedType != null )
+			{
+				boolean hasMockAnn = MockUtil.isMockMethod(meth);
+				IMethodBinding origMethod = findRealMethod(node, meth, mockedType);
+
+				if (!hasMockAnn && origMethod != null)
+				{
+					addMarker(node.getName(), "Mocked method missing @Mock annotation", false);
+				}
+
+				if (hasMockAnn && origMethod == null)
+				{
+					addMarker(node.getName(), "Mocked real method not found in type ", true);
+				}
+
+				if (hasMockAnn && origMethod != null && isPrivate(meth.getModifiers()))
+				{
+					addMarker(node.getName(), "Mocked method should not be private", true);
+				}
+			}
+
+			return true;
+		}
+
+		public IMethodBinding findRealMethod(final MethodDeclaration node,
+				final IMethodBinding meth, final ITypeBinding mockedType)
+		{
+			IMethodBinding origMethod = null;
+
+			if (mockedType != null)
+			{
+				String name = meth.getName();
+
+				if ( MockUtil.CTOR.equals(name)) // constructor
+				{
+					name = mockedType.getName();
+				}
+
+				ITypeBinding[] parameterTypes = meth.getParameterTypes(); // .getErasure()
+				origMethod = MockUtil.findRealMethodInType(mockedType, name, parameterTypes, node.getAST());
+			}
+			return origMethod;
+		}
+
+		@Override
 		public boolean visit(final AnonymousClassDeclaration node)
 		{
 			ITypeBinding binding = node.resolveBinding();
 
-			if (MockUtil.isMockUpType(binding.getSuperclass())) // new MockUp< type >
+			if ( MockUtil.isMockUpType(binding.getSuperclass()) ) // new MockUp< type >
 			{
 				ITypeBinding typePar = ASTUtil.getFirstTypeParameter(node);
 				ASTNode parent = node.getParent();
 
 				if (parent instanceof ClassInstanceCreation && typePar.isInterface()  ) // creating interface mock
 				{
-					ASTNode gparent = parent.getParent();
 					ClassInstanceCreation creation = (ClassInstanceCreation) parent;
 
-					Type typeNode = creation.getType();
-					boolean invokesGetInst = false;
-
-					if (gparent instanceof MethodInvocation) // method invocation follows
-					{
-						MethodInvocation inv = (MethodInvocation) gparent;
-						IMethodBinding meth = inv.resolveMethodBinding();
-
-						if ( MockUtil.GET_INST.equals(meth.getName()))
-						{
-							invokesGetInst = true;
-							if (gparent.getParent() instanceof ExpressionStatement)
-							{
-								addMarker(inv.getName(), "Returned mock instance is not being used.", false);
-							}
-						}
-					}
-
-					if( !invokesGetInst )
-					{
-						addMarker(typeNode, "Missing call to getMockInstance() on MockUp of interface",
-								false);
-					}
-
+					visitMockUpCreation(creation);
 				}
 
 			}
 
 			return true;
+		}
+
+		public void visitMockUpCreation(final ClassInstanceCreation creation)
+		{
+			ASTNode gparent = creation.getParent();
+
+			Type typeNode = creation.getType();
+			boolean invokesGetInst = false;
+
+			if (gparent instanceof MethodInvocation) // method invocation follows
+			{
+				MethodInvocation inv = (MethodInvocation) gparent;
+				IMethodBinding meth = inv.resolveMethodBinding();
+
+				if ( MockUtil.GET_INST.equals(meth.getName()))
+				{
+					invokesGetInst = true;
+					if (gparent.getParent() instanceof ExpressionStatement)
+					{
+						addMarker(inv.getName(), "Returned mock instance is not being used.", false);
+					}
+				}
+			}
+
+			if( !invokesGetInst )
+			{
+				addMarker(typeNode, "Missing call to getMockInstance() on MockUp of interface",
+						false);
+			}
 		}
 
 		@Override
@@ -347,49 +416,6 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 //					}
 //				}
 //			}
-
-			return true;
-		}
-
-		@Override
-		public boolean visit(final MethodDeclaration node)
-		{
-			IMethodBinding meth = node.resolveBinding();
-			ITypeBinding mockedType = MockUtil.findMockedType(node, meth); // new MockUp< MockedType >
-
-			if ( mockedType != null )
-			{
-				boolean hasMockAnn = MockUtil.isMockMethod(meth);
-				IMethodBinding origMethod = null;
-
-				if (mockedType != null)
-				{
-					String name = meth.getName();
-
-					if ( MockUtil.CTOR.equals(name)) // constructor
-					{
-						name = mockedType.getName();
-					}
-
-					ITypeBinding[] parameterTypes = meth.getParameterTypes(); // .getErasure()
-					origMethod = MockUtil.findRealMethodInType(mockedType, name, parameterTypes);
-				}
-
-				if (!hasMockAnn && origMethod != null)
-				{
-					addMarker(node.getName(), "Mocked method missing @Mock annotation", false);
-				}
-
-				if (hasMockAnn && origMethod == null)
-				{
-					addMarker(node.getName(), "Mocked real method not found in type ", true);
-				}
-
-				if (hasMockAnn && origMethod != null && isPrivate(meth.getModifiers()))
-				{
-					addMarker(node.getName(), "Mocked method should not be private", true);
-				}
-			}
 
 			return true;
 		}

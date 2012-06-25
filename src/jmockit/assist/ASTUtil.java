@@ -11,10 +11,8 @@
  */
 package jmockit.assist;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
@@ -185,37 +183,44 @@ public class ASTUtil
 		return methods;
 	}
 
-	public static String getSig(final IMethodBinding m) throws JavaModelException
+	public static String getSig(final IMethodBinding m)
 	{
 		String sig = m.getKey().split(";", 2)[1]; // remove declaring type
 		return m.getName() +  sig;
 	}
 
-	public static Collection<IMethodBinding> getAllMethods(final ITypeBinding paramType)
+	public static Collection<IMethodBinding> getAllMethods(final ITypeBinding paramType, final AST ast)
 			throws JavaModelException
 	{
-		List<IMethodBinding> methods = new ArrayList<IMethodBinding>();
-		methods.addAll(Arrays.asList( paramType.getDeclaredMethods() ) );
-
-		if( paramType.isInterface() )
-		{
-			for(ITypeBinding superType: Bindings.getAllSuperTypes(paramType))
-			{
-				if( !Object.class.getName().equals(superType.getQualifiedName()) )
-				{
-					methods.addAll( Arrays.asList(superType.getDeclaredMethods()) );
-				}
-			}
-		}
-
-		Collections.sort(methods, new Comparator<IMethodBinding>()
+		Set<IMethodBinding> methods = new TreeSet<IMethodBinding>(new Comparator<IMethodBinding>()
 		{
 			@Override
 			public int compare(final IMethodBinding m1, final IMethodBinding m2)
 			{
-				return m1.getName().compareTo( m2.getName() );
+				return getSig(m1).compareTo( getSig(m2) );
 			}
 		});
+
+		methods.addAll(Arrays.asList( paramType.getDeclaredMethods() ) );
+
+		if( paramType.isInterface() )
+		{
+			ITypeBinding[] superTypes = Bindings.getAllSuperTypes(paramType);
+
+			for(ITypeBinding superType: superTypes )
+			{
+				methods.addAll( Arrays.asList(superType.getDeclaredMethods()) );
+			}
+
+			ITypeBinding obj = ast.resolveWellKnownType(Object.class.getName());
+			for(IMethodBinding m: obj.getDeclaredMethods())
+			{
+				if( !m.isConstructor() )
+				{
+					methods.add(m);
+				}
+			}
+		}
 
 		return methods;
 	}

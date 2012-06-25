@@ -11,6 +11,7 @@
  */
 package jmockit.assist;
 
+import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.AnonymousClassDeclaration;
 import org.eclipse.jdt.core.dom.IAnnotationBinding;
@@ -104,9 +105,16 @@ public class MockUtil
 	}
 
 	public static IMethodBinding findRealMethodInType(final ITypeBinding type, final String name,
-			final ITypeBinding[] paramTypes)
+			final ITypeBinding[] paramTypes, final AST ast)
 	{
 		IMethodBinding origMethod = ASTUtil.findMethodInType(type, name, paramTypes);
+
+		if( origMethod == null && type.isInterface() && ast != null ) // interfaces can mock Object methods
+		{
+			ITypeBinding objType = ast.resolveWellKnownType(Object.class.getName());
+
+			origMethod = ASTUtil.findMethodInType(objType, name, paramTypes);
+		}
 
 		if (origMethod == null && type.getTypeArguments().length != 0)
 		{

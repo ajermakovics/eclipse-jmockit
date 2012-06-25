@@ -68,6 +68,7 @@ implements ICompletionProposalExtension4
 
 	static final int MAX_RELEVANCE = 100;
 	static final int METHOD_RELEVANCE = 90;
+	static final int OBJ_METHOD_RELEVANCE = 80;
 
 	private final IMethodBinding method;
 
@@ -96,7 +97,15 @@ implements ICompletionProposalExtension4
 		buffer.append(completionProposal);
 		buffer.append(" { }");
 
-		setImage(JavaPluginImages.get(JavaPluginImages.IMG_MISC_DEFAULT));
+		if( Object.class.getName().equals( method.getDeclaringClass().getQualifiedName() ) ) // from Object
+		{
+			setImage(JavaPluginImages.get(JavaPluginImages.IMG_MISC_PUBLIC));
+			setRelevance(OBJ_METHOD_RELEVANCE);
+		}
+		else
+		{
+			setImage(JavaPluginImages.get(JavaPluginImages.IMG_MISC_DEFAULT));
+		}
 
 		setReplacementString(buffer.toString());
 	}
@@ -174,7 +183,11 @@ implements ICompletionProposalExtension4
 		MethodDeclaration stub = StubUtility2.createImplementationStub(fCompilationUnit, rewrite,
 				importRewrite, context, method, declaringType.getName(), settings, false);
 
-		stub.modifiers().clear();
+		if( !Object.class.getName().equals( method.getDeclaringClass().getQualifiedName() ) )
+		{
+			stub.modifiers().clear();
+		}
+
 		ASTUtil.addAnnotation("Mock", fJavaProject, rewrite, stub, method);
 		importRewrite.addImport(MockUtil.MOCK, context);
 

@@ -25,8 +25,10 @@ import org.eclipse.core.runtime.IProgressMonitor;
 import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.IMethod;
 import org.eclipse.jdt.core.JavaModelException;
+import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.AnonymousClassDeclaration;
+import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
@@ -65,10 +67,11 @@ public class JmockitProposalComputer implements IJavaCompletionProposalComputer,
 	{
 		ITypeBinding mockType = null, paramType = null;
 		ICompilationUnit cunit = getCompilationUnit(context);
+		CompilationUnit astRoot = null;
 
 		if (cunit != null)
 		{
-			ASTNode astRoot = ASTUtil.getAstOrParse(cunit, mon);
+			astRoot = ASTUtil.getAstOrParse(cunit, mon);
 
 			if( astRoot != null )
 			{
@@ -83,7 +86,7 @@ public class JmockitProposalComputer implements IJavaCompletionProposalComputer,
 		{
 			try
 			{
-				return getProposals(context, paramType, cunit, mockType);
+				return getProposals(context, paramType, cunit, mockType, astRoot.getAST());
 			}
 			catch (Exception e)
 			{
@@ -127,7 +130,7 @@ public class JmockitProposalComputer implements IJavaCompletionProposalComputer,
 
 	private List<ICompletionProposal> getProposals(final ContentAssistInvocationContext context,
 			final ITypeBinding paramType,
-			final ICompilationUnit cunit, final ITypeBinding mockType)
+			final ICompilationUnit cunit, final ITypeBinding mockType, final AST ast)
 					throws JavaModelException, BadLocationException
 	{
 		Collection<IJavaCompletionProposal> list = new ArrayList<IJavaCompletionProposal>();
@@ -136,7 +139,7 @@ public class JmockitProposalComputer implements IJavaCompletionProposalComputer,
 
 		addItFieldProposal(context, paramType, mockType, list, prefix);
 
-		for (final IMethodBinding meth : ASTUtil.getAllMethods(paramType) )
+		for (final IMethodBinding meth : ASTUtil.getAllMethods(paramType, ast) )
 		{
 			String methodName = meth.getName();
 
