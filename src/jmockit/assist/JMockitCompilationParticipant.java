@@ -224,14 +224,19 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 
 		try
 		{
-			MockASTVisitor visitor = new MockASTVisitor(context.getWorkingCopy());
-			context.getAST3().accept(visitor);
+			ICompilationUnit cunit = context.getWorkingCopy();
 
-			CategorizedProblem[] probs = visitor.getProblems();
-
-			if (probs.length != 0)
+			if( cunit.isStructureKnown() )
 			{
-				context.putProblems(probs[0].getMarkerType(), probs);
+				MockASTVisitor visitor = new MockASTVisitor(cunit);
+				context.getAST3().accept(visitor);
+
+				CategorizedProblem[] probs = visitor.getProblems();
+
+				if (probs.length != 0)
+				{
+					context.putProblems(probs[0].getMarkerType(), probs);
+				}
 			}
 		}
 		catch (JavaModelException e)
