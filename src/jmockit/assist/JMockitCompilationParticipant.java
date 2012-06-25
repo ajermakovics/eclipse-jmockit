@@ -21,6 +21,11 @@ import jmockit.assist.prefs.Prefs.CheckScope;
 
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IResource;
+import org.eclipse.core.resources.WorkspaceJob;
+import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.IStatus;
+import org.eclipse.core.runtime.Status;
 import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.IJavaProject;
 import org.eclipse.jdt.core.IType;
@@ -42,6 +47,7 @@ import org.eclipse.jdt.core.dom.IBinding;
 import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
+import org.eclipse.jdt.core.dom.ImportDeclaration;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.MethodInvocation;
 import org.eclipse.jdt.core.dom.SimpleName;
@@ -49,6 +55,7 @@ import org.eclipse.jdt.core.dom.Type;
 import org.eclipse.jdt.core.dom.TypeDeclaration;
 import org.eclipse.jdt.internal.compiler.problem.DefaultProblem;
 import org.eclipse.jdt.internal.compiler.problem.ProblemSeverities;
+import org.eclipse.ui.progress.IProgressConstants;
 
 @SuppressWarnings("restriction")
 /**
@@ -68,6 +75,55 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 		System.err.println("build finished");
 	}
 
+	private static class AnalysisJob extends WorkspaceJob
+	{
+		private List<BuildContext> files;
+
+		public AnalysisJob(final List<BuildContext> filesPar)
+		{
+			super("JMockit analysis");
+			this.files = filesPar;
+			setProperty(IProgressConstants.KEEP_PROPERTY, Boolean.TRUE);
+		}
+
+		@Override
+		public IStatus runInWorkspace(final IProgressMonitor mon) throws CoreException
+		{
+			mon.beginTask("Analyzing files", files.size());
+			for(BuildContext f: files)
+			{
+				ICompilationUnit cunit = JavaCore.createCompilationUnitFrom(f.getFile());
+
+				try
+				{
+					if (cunit != null && cunit.isStructureKnown() )
+					{
+						mon.subTask("Parsing " + cunit.getElementName());
+						CompilationUnit cu = ASTUtil.getAstOrParse(cunit, mon);
+
+						MockASTVisitor visitor = new MockASTVisitor(cunit);
+						cu.accept(visitor);
+						f.recordNewProblems(visitor.getProblems());
+					}
+				}
+				catch (JavaModelException e)
+				{
+					Activator.log(e);
+					return Status.CANCEL_STATUS;
+				}
+
+				if( mon.isCanceled() )
+				{
+					break;
+				}
+
+				mon.worked(1);
+			}
+
+			return Status.OK_STATUS;
+		}
+	}
+
 	@Override
 	public void buildStarting(final BuildContext[] files, final boolean isBatch)
 	{
@@ -84,6 +140,7 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 			activeProj = res.getProject().getName();
 		}
 
+		List<BuildContext> filesToParse = new ArrayList<BuildContext>();
 		for (BuildContext f : files)
 		{
 			IFile file = f.getFile();
@@ -102,24 +159,12 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 				}
 			}
 
-			ICompilationUnit cunit = JavaCore.createCompilationUnitFrom(file);
-
-			try
-			{
-				if (cunit != null && cunit.isStructureKnown() )
-				{
-					CompilationUnit cu = ASTUtil.getAstOrParse(cunit, null);
-
-					MockASTVisitor visitor = new MockASTVisitor(cunit);
-					cu.accept(visitor);
-					f.recordNewProblems(visitor.getProblems());
-				}
-			}
-			catch (JavaModelException e)
-			{
-				Activator.log(e);
-			}
+			filesToParse.add(f);
 		}
+
+		AnalysisJob job = new AnalysisJob(filesToParse);
+		job.setSystem(false);
+		job.schedule();
 	}
 
 	public static CheckScope getCheckScope()
@@ -130,7 +175,8 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 		try
 		{
 			scope = CheckScope.valueOf(propVal);
-		} catch(Exception e)
+		}
+		catch(Exception e)
 		{
 			Activator.log(e);
 		}
@@ -197,6 +243,7 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 	{
 		private final ICompilationUnit icunit;
 		private CompilationUnit cu;
+		private boolean hasMockitImport = false;
 
 		private final List<CategorizedProblem> probs = new ArrayList<CategorizedProblem>();
 
@@ -320,7 +367,7 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 
 			if (meth == null)
 			{
-				return true;
+				return false;
 			}
 
 			if ( MockUtil.isMockUpType(meth.getDeclaringClass()) && MockUtil.GET_INST.equals(meth.getName()))
@@ -423,7 +470,15 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 		@Override
 		public boolean visit(final TypeDeclaration node)
 		{
-			return super.visit(node);
+			return hasMockitImport;
+		}
+
+		@Override
+		public boolean visit(final ImportDeclaration node)
+		{
+			String importName = node.getName().getFullyQualifiedName();
+			hasMockitImport = hasMockitImport || importName.startsWith("mockit.Mock");
+			return true;
 		}
 
 		private void addMarker(final ASTNode node, final String msg, final boolean isError)
