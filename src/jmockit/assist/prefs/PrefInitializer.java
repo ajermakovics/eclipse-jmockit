@@ -26,7 +26,7 @@ public final class PrefInitializer extends AbstractPreferenceInitializer
 	public void initializeDefaultPreferences()
 	{
 		IPreferenceStore prefStore = Activator.getPrefStore();
-		prefStore.setDefault(Prefs.PROP_CHECK_SCOPE, Prefs.CheckScope.Workspace.name());
+		prefStore.setDefault(Prefs.PROP_CHECK_SCOPE, Prefs.CheckScope.File.name());
 		prefStore.setDefault(Prefs.PROP_ADD_JAVAAGENT, true);
 	}
 }

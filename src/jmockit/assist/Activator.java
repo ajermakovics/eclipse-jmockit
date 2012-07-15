@@ -81,8 +81,13 @@ public class Activator extends AbstractUIPlugin
 	public static void log(final Exception e)
 	{
 		e.printStackTrace();
-		Status status = new Status(IStatus.ERROR, context.getBundle().getSymbolicName(), e.getMessage(), e);
+		Status status = createStatus(e);
 		plugin.getLog().log(status);
+	}
+
+	public static Status createStatus(final Exception e)
+	{
+		return new Status(IStatus.ERROR, context.getBundle().getSymbolicName(), e.getMessage(), e);
 	}
 
 	public static void info(final String msg)

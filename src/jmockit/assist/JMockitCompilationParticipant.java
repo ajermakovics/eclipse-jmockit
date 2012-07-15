@@ -11,15 +11,20 @@
  */
 package jmockit.assist;
 
-import static org.eclipse.jdt.core.dom.Modifier.isPrivate;
+import static org.eclipse.core.resources.IMarker.SEVERITY_ERROR;
+import static org.eclipse.core.resources.IMarker.SEVERITY_WARNING;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 import jmockit.assist.prefs.Prefs;
 import jmockit.assist.prefs.Prefs.CheckScope;
 
 import org.eclipse.core.resources.IFile;
+import org.eclipse.core.resources.IMarker;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.WorkspaceJob;
 import org.eclipse.core.runtime.CoreException;
@@ -34,94 +39,24 @@ import org.eclipse.jdt.core.JavaModelException;
 import org.eclipse.jdt.core.compiler.BuildContext;
 import org.eclipse.jdt.core.compiler.CategorizedProblem;
 import org.eclipse.jdt.core.compiler.CompilationParticipant;
-import org.eclipse.jdt.core.compiler.IProblem;
 import org.eclipse.jdt.core.compiler.ReconcileContext;
-import org.eclipse.jdt.core.dom.ASTNode;
-import org.eclipse.jdt.core.dom.ASTVisitor;
-import org.eclipse.jdt.core.dom.AnonymousClassDeclaration;
-import org.eclipse.jdt.core.dom.ClassInstanceCreation;
 import org.eclipse.jdt.core.dom.CompilationUnit;
-import org.eclipse.jdt.core.dom.ExpressionStatement;
-import org.eclipse.jdt.core.dom.FieldDeclaration;
-import org.eclipse.jdt.core.dom.IBinding;
-import org.eclipse.jdt.core.dom.IMethodBinding;
-import org.eclipse.jdt.core.dom.ITypeBinding;
-import org.eclipse.jdt.core.dom.IVariableBinding;
-import org.eclipse.jdt.core.dom.ImportDeclaration;
-import org.eclipse.jdt.core.dom.MethodDeclaration;
-import org.eclipse.jdt.core.dom.MethodInvocation;
-import org.eclipse.jdt.core.dom.SimpleName;
-import org.eclipse.jdt.core.dom.Type;
-import org.eclipse.jdt.core.dom.TypeDeclaration;
-import org.eclipse.jdt.internal.compiler.problem.DefaultProblem;
-import org.eclipse.jdt.internal.compiler.problem.ProblemSeverities;
 import org.eclipse.ui.progress.IProgressConstants;
 
-@SuppressWarnings("restriction")
+
 /**
  * Compilation participant to check mock classes and methods for problems
  */
 public final class JMockitCompilationParticipant extends CompilationParticipant
 {
+	private static final int JOB_DELAY = 2000;
+	//private static final int JOB_DELAY = 2000;
 	public static final String MARKER = "jmockit.eclipse.marker";
-
-	public JMockitCompilationParticipant()
-	{
-	}
+	private AnalysisJob job = new AnalysisJob();
 
 	@Override
 	public void buildFinished(final IJavaProject project)
 	{
-		System.err.println("build finished");
-	}
-
-	private static class AnalysisJob extends WorkspaceJob
-	{
-		private List<BuildContext> files;
-
-		public AnalysisJob(final List<BuildContext> filesPar)
-		{
-			super("JMockit analysis");
-			this.files = filesPar;
-			setProperty(IProgressConstants.KEEP_PROPERTY, Boolean.TRUE);
-		}
-
-		@Override
-		public IStatus runInWorkspace(final IProgressMonitor mon) throws CoreException
-		{
-			mon.beginTask("Analyzing files", files.size());
-			for(BuildContext f: files)
-			{
-				ICompilationUnit cunit = JavaCore.createCompilationUnitFrom(f.getFile());
-
-				try
-				{
-					if (cunit != null && cunit.isStructureKnown() )
-					{
-						mon.subTask("Parsing " + cunit.getElementName());
-						CompilationUnit cu = ASTUtil.getAstOrParse(cunit, mon);
-
-						MockASTVisitor visitor = new MockASTVisitor(cunit);
-						cu.accept(visitor);
-						f.recordNewProblems(visitor.getProblems());
-					}
-				}
-				catch (JavaModelException e)
-				{
-					Activator.log(e);
-					return Status.CANCEL_STATUS;
-				}
-
-				if( mon.isCanceled() )
-				{
-					break;
-				}
-
-				mon.worked(1);
-			}
-
-			return Status.OK_STATUS;
-		}
 	}
 
 	@Override
@@ -162,9 +97,15 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 			filesToParse.add(f);
 		}
 
-		AnalysisJob job = new AnalysisJob(filesToParse);
-		job.setSystem(false);
-		job.schedule();
+		job.addFiles(filesToParse);
+		if( isBatch )
+		{
+			job.schedule(JOB_DELAY);
+		}
+		else
+		{
+			job.schedule();
+		}
 	}
 
 	public static CheckScope getCheckScope()
@@ -188,7 +129,7 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 	{
 		CheckScope checkScope = getCheckScope();
 
-		if( checkScope == CheckScope.Disabled )
+		if( checkScope == CheckScope.Disabled || !project.isOpen() )
 		{
 			return false;
 		}
@@ -230,7 +171,6 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 			{
 				MockASTVisitor visitor = new MockASTVisitor(cunit);
 				context.getAST3().accept(visitor);
-
 				CategorizedProblem[] probs = visitor.getProblems();
 
 				if (probs.length != 0)
@@ -244,285 +184,84 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 			Activator.log(e);
 		}
 	}
-	public static final class MockASTVisitor extends ASTVisitor
+
+	private static class AnalysisJob extends WorkspaceJob
 	{
-		private final ICompilationUnit icunit;
-		private CompilationUnit cu;
-		private boolean hasMockitImport = false;
+		private Queue<BuildContext> files = new ConcurrentLinkedQueue<BuildContext>();
 
-		private final List<CategorizedProblem> probs = new ArrayList<CategorizedProblem>();
-
-		public MockASTVisitor(final ICompilationUnit cunitPar)
+		public AnalysisJob()
 		{
-			icunit = cunitPar;
+			super("JMockit analysis");
+
+			setSystem(false);
+			setProperty(IProgressConstants.KEEP_PROPERTY, Boolean.FALSE);
+		}
+
+		void addFiles( final Collection<BuildContext> buildContexts)
+		{
+			files.addAll(buildContexts);
 		}
 
 		@Override
-		public boolean visit(final CompilationUnit node)
+		public IStatus runInWorkspace(final IProgressMonitor mon) throws CoreException
 		{
-			cu = node;
-			return true;
-		}
+			mon.beginTask("JMockit file analysis", files.size());
+			BuildContext f = files.poll();
 
-		@Override
-		public boolean visit(final MethodDeclaration node)
-		{
-			IMethodBinding meth = node.resolveBinding();
-			ITypeBinding mockedType = MockUtil.findMockedType(node, meth); // new MockUp< MockedType >
-
-			if ( mockedType != null )
+			while( f != null && !mon.isCanceled() )
 			{
-				boolean hasMockAnn = MockUtil.isMockMethod(meth);
-				IMethodBinding origMethod = findRealMethod(node, meth, mockedType);
+				IFile file = f.getFile();
+				ICompilationUnit cunit = JavaCore.createCompilationUnitFrom(file);
 
-				if (!hasMockAnn && origMethod != null)
+				try
 				{
-					addMarker(node.getName(), "Mocked method missing @Mock annotation", false);
-				}
-
-				if (hasMockAnn && origMethod == null)
-				{
-					addMarker(node.getName(), "Mocked real method not found in type ", true);
-				}
-
-				if (hasMockAnn && origMethod != null && isPrivate(meth.getModifiers()))
-				{
-					addMarker(node.getName(), "Mocked method should not be private", true);
-				}
-			}
-
-			return true;
-		}
-
-		public IMethodBinding findRealMethod(final MethodDeclaration node,
-				final IMethodBinding meth, final ITypeBinding mockedType)
-		{
-			IMethodBinding origMethod = null;
-
-			if (mockedType != null)
-			{
-				String name = meth.getName();
-
-				if ( MockUtil.CTOR.equals(name)) // constructor
-				{
-					name = mockedType.getName();
-				}
-
-				ITypeBinding[] parameterTypes = meth.getParameterTypes(); // .getErasure()
-				origMethod = MockUtil.findRealMethodInType(mockedType, name, parameterTypes, node.getAST());
-			}
-			return origMethod;
-		}
-
-		@Override
-		public boolean visit(final AnonymousClassDeclaration node)
-		{
-			ITypeBinding binding = node.resolveBinding();
-
-			if ( MockUtil.isMockUpType(binding.getSuperclass()) ) // new MockUp< type >
-			{
-				ITypeBinding typePar = ASTUtil.getFirstTypeParameter(node);
-				ASTNode parent = node.getParent();
-
-				if (parent instanceof ClassInstanceCreation && typePar.isInterface()  ) // creating interface mock
-				{
-					ClassInstanceCreation creation = (ClassInstanceCreation) parent;
-
-					visitMockUpCreation(creation);
-				}
-
-			}
-
-			return true;
-		}
-
-		public void visitMockUpCreation(final ClassInstanceCreation creation)
-		{
-			ASTNode gparent = creation.getParent();
-
-			Type typeNode = creation.getType();
-			boolean invokesGetInst = false;
-
-			if (gparent instanceof MethodInvocation) // method invocation follows
-			{
-				MethodInvocation inv = (MethodInvocation) gparent;
-				IMethodBinding meth = inv.resolveMethodBinding();
-
-				if ( MockUtil.GET_INST.equals(meth.getName()))
-				{
-					invokesGetInst = true;
-					if (gparent.getParent() instanceof ExpressionStatement)
+					if (cunit != null && cunit.isStructureKnown() )
 					{
-						addMarker(inv.getName(), "Returned mock instance is not being used.", false);
-					}
-				}
-			}
+						mon.subTask(cunit.getElementName());
+						CompilationUnit cu = ASTUtil.getAstOrParse(cunit, mon);
 
-			if( !invokesGetInst )
-			{
-				addMarker(typeNode, "Missing call to getMockInstance() on MockUp of interface",
-						false);
-			}
-		}
+						MockASTVisitor visitor = new MockASTVisitor(cunit);
+						cu.accept(visitor);
 
-		@Override
-		public boolean visit(final MethodInvocation node)
-		{
-			IMethodBinding meth = node.resolveMethodBinding();
+						CategorizedProblem[] probs = visitor.getProblems();
 
-			if (meth == null)
-			{
-				return false;
-			}
-
-			if ( MockUtil.isMockUpType(meth.getDeclaringClass()) && MockUtil.GET_INST.equals(meth.getName()))
-			{
-				ITypeBinding returnType = node.resolveTypeBinding();
-
-				if (!returnType.isInterface())
-				{
-					String msg = "getMockInstance() used on mock of class " + returnType.getName()
-							+ ". Use on interfaces";
-					addMarker(node.getName(), msg, false);
-				}
-			}
-
-			visitItFieldInvocation(node, meth);
-
-			return true;
-		}
-
-		// consider visit(FieldAccess )
-		private void visitItFieldInvocation(final MethodInvocation node, final IMethodBinding meth)
-		{
-			if (node.getExpression() instanceof SimpleName)
-			{
-				SimpleName var = (SimpleName) node.getExpression();
-				String varName = var.getIdentifier();
-
-				IBinding exprBinding = var.resolveBinding();
-
-				if ( "it".equals(varName) && exprBinding instanceof IVariableBinding ) // call on 'it' field
-				{
-					IVariableBinding varBinding = (IVariableBinding) exprBinding;
-					IMethodBinding mockMethod = getSurroundingMockMethod(node);
-
-					if( mockMethod != null && varBinding.isField() && mockMethod.isSubsignature(meth)
-							&& varBinding.getDeclaringClass().equals(mockMethod.getDeclaringClass()) )
-					{
-						ITypeBinding mockedType = MockUtil.findMockedType(node);
-
-						if( mockedType.equals(varBinding.getType()) // field type is correct mocked type
-								&& !MockUtil.isReentrantMockMethod(mockMethod) )
+						for (CategorizedProblem prob : probs) //f.recordNewProblems(probs);
 						{
-							addMarker( node,
-									"Method calls itself. Set @Mock(reentrant=true) on method '"
-											+ mockMethod.getName() + "'", true);
+							createProblemMarker(file, prob);
 						}
 					}
 				}
-			}
-		}
-
-		private IMethodBinding getSurroundingMockMethod(final MethodInvocation node)
-		{
-			MethodDeclaration surroundingMeth = ASTUtil.findAncestor(node, MethodDeclaration.class);
-			IMethodBinding mockMethod = null;
-
-			if (surroundingMeth != null)
-			{
-				mockMethod = surroundingMeth.resolveBinding();
-			}
-
-			if( mockMethod != null && MockUtil.isMockMethod(mockMethod) )
-			{
-				return mockMethod;
-			}
-			else
-			{
-				return null;
-			}
-		}
-
-		@Override
-		public boolean visit(final FieldDeclaration node)
-		{
-			//add checks:
-			// - 'it' field should have the correct type
-			// - it field should not be private
-			// - adding other fields to a  mock - warning about shared state?
-
-//			for(Object fragment: node.fragments())
-//			{
-//				if(fragment instanceof VariableDeclarationFragment)
-//				{
-//					VariableDeclarationFragment varDec = (VariableDeclarationFragment) fragment;
-//
-//					if( "it".equals(varDec.getName().getIdentifier()) )
-//					{
-//						IVariableBinding ivar = varDec.resolveBinding();
-//
-//						if( ASTUtil.isMockUpType(ivar.getDeclaringClass().getSuperclass()) )
-//						{
-//						}
-//					}
-//				}
-//			}
-
-			return true;
-		}
-
-		@Override
-		public boolean visit(final TypeDeclaration node)
-		{
-			return hasMockitImport;
-		}
-
-		@Override
-		public boolean visit(final ImportDeclaration node)
-		{
-			String importName = node.getName().getFullyQualifiedName();
-			hasMockitImport = hasMockitImport || importName.startsWith("mockit.Mock");
-			return true;
-		}
-
-		private void addMarker(final ASTNode node, final String msg, final boolean isError)
-		{
-			try
-			{
-				int start = node.getStartPosition();
-				int endChar = start + node.getLength();
-				int line = cu.getLineNumber(start);
-				int col = cu.getColumnNumber(start);
-				int id = IProblem.TypeRelated;
-				String filePath = icunit.getPath().toOSString();
-				String[] args = new String[]{};
-
-				int severity = isError ? ProblemSeverities.Error : ProblemSeverities.Warning;
-
-				CategorizedProblem problem = new DefaultProblem(filePath.toCharArray(), msg, id,
-						args, severity, start, endChar, line, col)
+				catch (Exception e)
 				{
-					@Override
-					public String getMarkerType()
-					{
-						return MARKER;
-					}
-				};
+					Activator.log(e);
+					setProperty(IProgressConstants.KEEP_PROPERTY, Boolean.TRUE);
+					files.clear();
+					return Activator.createStatus(e);
+				}
 
-				probs.add(problem);
+				mon.worked(1);
+				f = files.poll();
 			}
-			catch (Exception e)
+
+			if( mon.isCanceled() )
 			{
-				Activator.log(e);
+				files.clear();
+				return Status.CANCEL_STATUS;
 			}
+
+			return Status.OK_STATUS;
 		}
 
-		public CategorizedProblem[] getProblems()
+		private static void createProblemMarker(final IFile file, final CategorizedProblem prob) throws CoreException
 		{
-			return probs.toArray(new CategorizedProblem[]{});
+			IMarker marker = file.createMarker(MARKER);
+			marker.setAttribute(IMarker.TRANSIENT, true);
+			marker.setAttribute(IMarker.MESSAGE, prob.getMessage());
+			marker.setAttribute(IMarker.LINE_NUMBER, prob.getSourceLineNumber());
+			marker.setAttribute(IMarker.CHAR_START, prob.getSourceStart());
+			marker.setAttribute(IMarker.CHAR_END, prob.getSourceEnd());
+			marker.setAttribute(IMarker.SEVERITY, prob.isError()?SEVERITY_ERROR:SEVERITY_WARNING);
 		}
-
 	}
 
 }

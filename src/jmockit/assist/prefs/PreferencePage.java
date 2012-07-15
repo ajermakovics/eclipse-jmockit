@@ -11,11 +11,17 @@
  */
 package jmockit.assist.prefs;
 
+import static jmockit.assist.JMockitCompilationParticipant.MARKER;
 import jmockit.assist.Activator;
 
+import org.eclipse.core.resources.IResource;
+import org.eclipse.core.resources.ResourcesPlugin;
+import org.eclipse.core.runtime.CoreException;
 import org.eclipse.jface.preference.BooleanFieldEditor;
 import org.eclipse.jface.preference.ComboFieldEditor;
+import org.eclipse.jface.preference.FieldEditor;
 import org.eclipse.jface.preference.FieldEditorPreferencePage;
+import org.eclipse.jface.util.PropertyChangeEvent;
 import org.eclipse.ui.IWorkbench;
 import org.eclipse.ui.IWorkbenchPreferencePage;
 
@@ -50,5 +56,33 @@ public final class PreferencePage extends FieldEditorPreferencePage implements I
 				"Add -javaagent:jmockit.jar when running JUnit", getFieldEditorParent()));
 	}
 
+	@Override
+	public boolean performOk()
+	{
+		try
+		{
+			ResourcesPlugin.getWorkspace().getRoot().deleteMarkers(MARKER, true, IResource.DEPTH_INFINITE);
+		}
+		catch (CoreException e)
+		{
+			Activator.log(e);
+		}
+		return super.performOk();
+	}
 
+	@Override
+	public void propertyChange(final PropertyChangeEvent event)
+	{
+		super.propertyChange(event);
+
+		if( event.getSource() instanceof FieldEditor )
+		{
+			FieldEditor field = (FieldEditor) event.getSource();
+
+			if( Prefs.PROP_CHECK_SCOPE.equals(field.getPreferenceName()) )
+			{
+				setMessage("Checks will be performed on next build", INFORMATION);
+			}
+		}
+	}
 }

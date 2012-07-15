@@ -120,7 +120,7 @@ public class ASTUtil
 	{
 		CompilationUnit cu = SharedASTProvider.getAST(iTypeRoot, SharedASTProvider.WAIT_NO, mon);
 
-		if( cu == null )
+		if( cu == null && (mon == null || !mon.isCanceled()) )
 		{
 			cu = parse(iTypeRoot, mon);
 		}
