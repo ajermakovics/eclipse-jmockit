@@ -63,10 +63,6 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 	public void buildStarting(final BuildContext[] files, final boolean isBatch)
 	{
 		CheckScope scope = getCheckScope();
-		if( scope == CheckScope.Disabled )
-		{
-			return;
-		}
 
 		IResource res = Activator.getActiveResource();
 		String activeProj = null;
@@ -86,18 +82,16 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 				continue;
 			}
 
-			if( scope == CheckScope.File )
+			if( scope == CheckScope.File && (res == null || !file.equals(res)) )
 			{
-				if( res == null || !file.equals(res) )
-				{
-					continue;
-				}
+				continue;
 			}
 
 			filesToParse.add(f);
 		}
 
 		job.addFiles(filesToParse);
+
 		if( isBatch )
 		{
 			job.schedule(JOB_DELAY);
@@ -111,7 +105,7 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 	public static CheckScope getCheckScope()
 	{
 		String propVal = Activator.getPrefStore().getString(Prefs.PROP_CHECK_SCOPE);
-		CheckScope scope = CheckScope.Workspace;
+		CheckScope scope = CheckScope.Disabled;
 
 		try
 		{
@@ -211,11 +205,17 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 			while( f != null && !mon.isCanceled() )
 			{
 				IFile file = f.getFile();
+
+				if( !file.isAccessible() || file.isDerived(IResource.CHECK_ANCESTORS) )
+				{
+					continue;
+				}
+
 				ICompilationUnit cunit = JavaCore.createCompilationUnitFrom(file);
 
 				try
 				{
-					if (cunit != null && cunit.isStructureKnown() )
+					if ( cunit != null && cunit.exists() && cunit.isStructureKnown() )
 					{
 						mon.subTask(cunit.getElementName());
 						CompilationUnit cu = ASTUtil.getAstOrParse(cunit, mon);
@@ -224,6 +224,7 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 						cu.accept(visitor);
 
 						CategorizedProblem[] probs = visitor.getProblems();
+						file.deleteMarkers(MARKER, true, IResource.DEPTH_INFINITE);
 
 						for (CategorizedProblem prob : probs) //f.recordNewProblems(probs);
 						{

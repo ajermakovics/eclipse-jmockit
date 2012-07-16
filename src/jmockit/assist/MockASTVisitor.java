@@ -1,3 +1,14 @@
+/*
+ * Copyright (c) 2012 Andrejs Jermakovics.
+ *
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ *
+ * Contributors:
+ *     Andrejs Jermakovics - initial implementation
+ */
 package jmockit.assist;
 
 import static org.eclipse.jdt.core.dom.Modifier.isPrivate;
@@ -64,19 +75,19 @@ public final class MockASTVisitor extends ASTVisitor
 		if ( mockedType != null )
 		{
 			boolean hasMockAnn = MockUtil.isMockMethod(meth);
-			IMethodBinding origMethod = findRealMethod(node, meth, mockedType);
+			boolean methodExists = findRealMethod(node, meth, mockedType) != null;
 
-			if (!hasMockAnn && origMethod != null)
+			if (!hasMockAnn && methodExists )
 			{
 				addMarker(node.getName(), "Mocked method missing @Mock annotation", false);
 			}
 
-			if (hasMockAnn && origMethod == null)
+			if (hasMockAnn && !methodExists )
 			{
-				addMarker(node.getName(), "Mocked real method not found in type ", true);
+				addMarker(node.getName(), "Mocked real method not found in type", true);
 			}
 
-			if (hasMockAnn && origMethod != null && isPrivate(meth.getModifiers()))
+			if (hasMockAnn && methodExists && isPrivate(meth.getModifiers()))
 			{
 				addMarker(node.getName(), "Mocked method should not be private", true);
 			}
