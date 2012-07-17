@@ -23,6 +23,7 @@ import org.eclipse.core.runtime.Status;
 import org.eclipse.debug.core.DebugPlugin;
 import org.eclipse.debug.core.ILaunchManager;
 import org.eclipse.jface.preference.IPreferenceStore;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.IEditorPart;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.IWorkbenchWindow;
@@ -111,10 +112,6 @@ public class Activator extends AbstractUIPlugin
 		{
 			project = resource.getProject();
 		}
-//		else
-//		{
-//			project = (IProject) adaptable.getAdapter(IProject.class);
-//		}
 
 		if (project != null && project.isAccessible())
 		{
@@ -127,14 +124,26 @@ public class Activator extends AbstractUIPlugin
 	public static IResource getActiveResource()
 	{
 		final AtomicReference<IEditorPart> editorRef = new AtomicReference<IEditorPart>();
-		plugin.getWorkbench().getDisplay().syncExec(new Runnable()
+
+		Display display = plugin.getWorkbench().getDisplay();
+
+		Runnable runnable = new Runnable()
 		{
 			@Override
 			public void run()
 			{
-				editorRef.set(getActiveEditor());
+				editorRef.set( getActiveEditor() );
 			}
-		});
+		};
+
+		if( Display.getCurrent() != null )
+		{
+			runnable.run();
+		}
+		else
+		{
+			display.syncExec(runnable);
+		}
 
 		IEditorPart editor = editorRef.get();
 

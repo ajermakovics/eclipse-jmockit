@@ -128,10 +128,8 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 			return false;
 		}
 
-		String activeProj = Activator.getActiveProject();
-
 		if( (checkScope == CheckScope.Project || checkScope == CheckScope.File )
-				&& !project.getProject().getName().equals(activeProj) )
+				&& !project.getProject().getName().equals(Activator.getActiveProject()) )
 		{
 			return false;
 		}
