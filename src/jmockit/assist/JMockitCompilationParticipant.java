@@ -197,49 +197,45 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 		@Override
 		public IStatus runInWorkspace(final IProgressMonitor mon) throws CoreException
 		{
-			mon.beginTask("JMockit file analysis", files.size());
+			String taskName = "JMockit file analysis";
+			int workSize = files.size(), worked = 0;
+			mon.beginTask(taskName, workSize);
 			BuildContext f = files.poll();
 
 			while( f != null && !mon.isCanceled() )
 			{
 				IFile file = f.getFile();
 
-				if( !file.isAccessible() || file.isDerived(IResource.CHECK_ANCESTORS) )
+				if( file.isAccessible() && !file.isDerived(IResource.CHECK_ANCESTORS) )
 				{
-					continue;
-				}
+					ICompilationUnit cunit = JavaCore.createCompilationUnitFrom(file);
 
-				ICompilationUnit cunit = JavaCore.createCompilationUnitFrom(file);
-
-				try
-				{
-					if ( cunit != null && cunit.exists() && cunit.isStructureKnown() )
+					try
 					{
-						mon.subTask(cunit.getElementName());
-						CompilationUnit cu = ASTUtil.getAstOrParse(cunit, mon);
-
-						MockASTVisitor visitor = new MockASTVisitor(cunit);
-						cu.accept(visitor);
-
-						CategorizedProblem[] probs = visitor.getProblems();
-						file.deleteMarkers(MARKER, true, IResource.DEPTH_INFINITE);
-
-						for (CategorizedProblem prob : probs) //f.recordNewProblems(probs);
-						{
-							createProblemMarker(file, prob);
-						}
+						mon.setTaskName(taskName + " - " + cunit.getElementName());
+						analyseFile(file, cunit, mon);
 					}
-				}
-				catch (Exception e)
-				{
-					Activator.log(e);
-					setProperty(IProgressConstants.KEEP_PROPERTY, Boolean.TRUE);
-					files.clear();
-					return Activator.createStatus(e);
+					catch (Exception e)
+					{
+						Activator.log(e);
+						setProperty(IProgressConstants.KEEP_PROPERTY, Boolean.TRUE);
+						files.clear();
+						return Activator.createStatus(e);
+					}
 				}
 
 				mon.worked(1);
 				f = files.poll();
+
+				worked++;
+				workSize--;
+
+				if( workSize < files.size() ) // more work
+				{
+					workSize = files.size();
+					mon.beginTask(taskName, workSize);
+					mon.worked(worked);
+				}
 			}
 
 			if( mon.isCanceled() )
@@ -248,7 +244,29 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 				return Status.CANCEL_STATUS;
 			}
 
+			mon.done();
+
 			return Status.OK_STATUS;
+		}
+
+		public void analyseFile(final IFile file, final ICompilationUnit cunit, final IProgressMonitor mon)
+				throws JavaModelException, CoreException
+		{
+			if ( cunit != null && cunit.exists() && cunit.isStructureKnown() )
+			{
+				CompilationUnit cu = ASTUtil.getAstOrParse(cunit, mon);
+
+				MockASTVisitor visitor = new MockASTVisitor(cunit);
+				cu.accept(visitor);
+
+				CategorizedProblem[] probs = visitor.getProblems();
+				file.deleteMarkers(MARKER, true, IResource.DEPTH_INFINITE);
+
+				for (CategorizedProblem prob : probs) //f.recordNewProblems(probs);
+				{
+					createProblemMarker(file, prob);
+				}
+			}
 		}
 
 		private static void createProblemMarker(final IFile file, final CategorizedProblem prob) throws CoreException
