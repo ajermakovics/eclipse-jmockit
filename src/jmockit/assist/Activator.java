@@ -11,10 +11,6 @@
  */
 package jmockit.assist;
 
-
-
-import java.util.concurrent.atomic.AtomicReference;
-
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.runtime.IAdaptable;
@@ -23,14 +19,13 @@ import org.eclipse.core.runtime.Status;
 import org.eclipse.debug.core.DebugPlugin;
 import org.eclipse.debug.core.ILaunchManager;
 import org.eclipse.jface.preference.IPreferenceStore;
-import org.eclipse.swt.widgets.Display;
 import org.eclipse.ui.IEditorPart;
+import org.eclipse.ui.IWindowListener;
 import org.eclipse.ui.IWorkbenchPage;
 import org.eclipse.ui.IWorkbenchWindow;
+import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.osgi.framework.BundleContext;
-
-
 
 public class Activator extends AbstractUIPlugin
 {
@@ -38,6 +33,8 @@ public class Activator extends AbstractUIPlugin
 	private static Activator plugin;
 
 	private final JunitLaunchListener launchListener = new JunitLaunchListener();
+	private IWorkbenchWindow activeWindow;
+	private IWindowListener windowListener;
 
 	static BundleContext getContext()
 	{
@@ -49,11 +46,6 @@ public class Activator extends AbstractUIPlugin
 		plugin = this;
 	}
 
-	/*
-	 * (non-Javadoc)
-	 *
-	 * @see org.osgi.framework.BundleActivator#start(org.osgi.framework.BundleContext)
-	 */
 	@Override
 	public final void start(final BundleContext bundleContext) throws Exception
 	{
@@ -63,13 +55,11 @@ public class Activator extends AbstractUIPlugin
 		ILaunchManager launchMan = DebugPlugin.getDefault().getLaunchManager();
 
 		launchMan.addLaunchListener(launchListener);
+
+		windowListener = createWindowListener();
+		PlatformUI.getWorkbench().addWindowListener(windowListener);
 	}
 
-	/*
-	 * (non-Javadoc)
-	 *
-	 * @see org.osgi.framework.BundleActivator#stop(org.osgi.framework.BundleContext)
-	 */
 	@Override
 	public final void stop(final BundleContext bundleContext) throws Exception
 	{
@@ -77,6 +67,7 @@ public class Activator extends AbstractUIPlugin
 		Activator.context = null;
 
 		DebugPlugin.getDefault().getLaunchManager().removeLaunchListener(launchListener);
+		PlatformUI.getWorkbench().removeWindowListener(windowListener);
 	}
 
 	public static void log(final Exception e)
@@ -105,7 +96,6 @@ public class Activator extends AbstractUIPlugin
 	public static String getActiveProject()
 	{
 		IResource resource = getActiveResource();
-
 		IProject project = null;
 
 		if (resource != null)
@@ -123,29 +113,7 @@ public class Activator extends AbstractUIPlugin
 
 	public static IResource getActiveResource()
 	{
-		final AtomicReference<IEditorPart> editorRef = new AtomicReference<IEditorPart>();
-
-		Display display = plugin.getWorkbench().getDisplay();
-
-		Runnable runnable = new Runnable()
-		{
-			@Override
-			public void run()
-			{
-				editorRef.set( getActiveEditor() );
-			}
-		};
-
-		if( Display.getCurrent() != null )
-		{
-			runnable.run();
-		}
-		else
-		{
-			display.syncExec(runnable);
-		}
-
-		IEditorPart editor = editorRef.get();
+		IEditorPart editor = getActiveEditor();
 
 		if( editor == null )
 		{
@@ -174,7 +142,7 @@ public class Activator extends AbstractUIPlugin
 		IWorkbenchPage activePage= getWorkbenchWindow().getActivePage();
 		if (activePage != null)
 		{
-			IEditorPart activeEditor= activePage.getActiveEditor();
+			IEditorPart activeEditor = activePage.getActiveEditor();
 
 			return activeEditor;
 		}
@@ -184,6 +152,33 @@ public class Activator extends AbstractUIPlugin
 
 	public static IWorkbenchWindow getWorkbenchWindow()
 	{
-		return plugin.getWorkbench().getActiveWorkbenchWindow();
+		return plugin.activeWindow;
+	}
+
+	private static IWindowListener createWindowListener()
+	{
+		return new IWindowListener()
+		{
+			@Override
+			public void windowActivated(final IWorkbenchWindow window)
+			{
+				plugin.activeWindow = window;
+			}
+
+			@Override
+			public void windowOpened(final IWorkbenchWindow window)
+			{
+			}
+
+			@Override
+			public void windowDeactivated(final IWorkbenchWindow window)
+			{
+			}
+
+			@Override
+			public void windowClosed(final IWorkbenchWindow window)
+			{
+			}
+		};
 	}
 }
