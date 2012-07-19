@@ -1,97 +1,142 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset='utf-8'>
-    <meta http-equiv="X-UA-Compatible" content="chrome=1">
-    <link href='https://fonts.googleapis.com/css?family=Chivo:900' rel='stylesheet' type='text/css'>
-    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen" />
-    <link rel="stylesheet" type="text/css" href="stylesheets/pygment_trac.css" media="screen" />
-    <link rel="stylesheet" type="text/css" href="stylesheets/print.css" media="print" />
-    <!--[if lt IE 9]>
+<head>
+<meta charset='utf-8'>
+<meta http-equiv="X-UA-Compatible" content="chrome=1">
+<link href='https://fonts.googleapis.com/css?family=Chivo:900'
+  rel='stylesheet' type='text/css'>
+<link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css"
+	media="screen" />
+<link rel="stylesheet" type="text/css"
+	href="stylesheets/pygment_trac.css" media="screen" />
+<link rel="stylesheet" type="text/css" href="stylesheets/print.css"
+	media="print" />
+<!--[if lt IE 9]>
     <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
     <![endif]-->
-    <title>JMockit Eclipse</title>
-  </head>
+<title>JMockit Eclipse</title>
+</head>
 
-  <body>
-    <div id="container">
-      <div class="inner">
+<body>
+	<div id="container">
+		<div class="inner">
 
-        <header>
-          <h1>JMockit Eclipse</h1>
-          <h2>Eclipse plug-in for JMockit. Checks and auto-completes mock objects</h2>
-        </header>
+			<header>
+				<h1>JMockit Eclipse</h1>
+				<h2>Eclipse plug-in for JMockit. Checks and auto-completes mock
+					objects</h2>
+			</header>
 
-        <section id="downloads" class="clearfix">
-          <a href="http://marketplace.eclipse.org/marketplace-client-intro?mpc_install=307615" class="button" title="Drag and drop into a running Eclipse Indigo workspace to install JMockit Eclipse"> 
-            <span><img src="http://marketplace.eclipse.org/misc/installbutton.png"/></span>
-          </a>
-          <a href="https://github.com/ajermakovics/eclipse-jmockit-assist/downloads" id="download-zip" class="button"><span>Download</span></a>
-          <a href="https://github.com/ajermakovics/eclipse-jmockit-assist" id="view-on-github" class="button"><span>View on GitHub</span></a>
-        </section>
+			<section id="downloads" class="clearfix">
+				<a
+					href="http://marketplace.eclipse.org/marketplace-client-intro?mpc_install=307615"
+					class="button"
+					title="Drag and drop into a running Eclipse Indigo workspace to install JMockit Eclipse">
+					<span><img
+						src="http://marketplace.eclipse.org/misc/installbutton.png" /></span>
+				</a> <a
+					href="https://github.com/ajermakovics/eclipse-jmockit-assist/downloads"
+					id="download-zip" class="button"><span>Download</span></a> <a
+					href="https://github.com/ajermakovics/eclipse-jmockit-assist"
+					id="view-on-github" class="button"><span>View on GitHub</span></a>
+			</section>
 
-        <hr>
+			<hr>
 
-        <section id="main_content">
-          <h2>About</h2>
+			<section id="main_content">
+				<h2>About</h2>
 
-<p><a href="http://www.eclipse.org">Eclipse</a> plugin that adds IDE support to <a href="https://code.google.com/p/jmockit/">JMockit</a> library. Provides mock method suggestions and performs static analysis to report API misuse.</p>
+				<p>
+					<a href="http://www.eclipse.org">Eclipse</a> plugin that adds IDE
+					support to <a href="https://code.google.com/p/jmockit/">JMockit</a>
+					library. Provides mock method suggestions and performs static
+					analysis to report API misuse.
+				</p>
 
-<h2>Features / Usage</h2>
+				<h2>Features / Usage</h2>
 
-<ol>
-<li>
-<p>Suggests methods to be mocked </p>
+				<ol>
+					<li>
+						<p>Suggests methods to be mocked</p>
 
-<ul>
-<li>Press Ctrl+Space inside a class extending <code>MockUp</code> or annotated with <code>@MockClass</code>. A list of mockable methods will appear.</li>
-</ul>
-</li>
-<li>
-<p>Reports warnings as-you-type if mocking API is not used correctly</p>
+						<ul>
+							<li>Press Ctrl+Space inside a class extending <code>MockUp</code>
+								or annotated with <code>@MockClass</code>. A list of mockable
+								methods will appear.
+							</li>
+						</ul>
+					</li>
+					<li>
+						<p>Reports warnings as-you-type if mocking API is not used
+							correctly</p>
 
-<ul>
-<li>No corresponding real method for mocked method</li>
-<li>Mock method calling itself but is not marked as 'reentrant'</li>
-<li>
-<code>MockUp</code> used with interface but missing <code>getMockInstance()</code> call</li>
-<li>Mock method missing <code>@Mock</code> annotation </li>
-<li>and others</li>
-</ul>
-</li>
-<li><p>Automatically adds JMockit jar as <code>-javaagent</code> argument to JUnit launches. <a href="http://jmockit.googlecode.com/svn/trunk/www/gettingStarted.html">info</a></p></li>
-</ol>
+						<ul>
+							<li>No corresponding real method for mocked method</li>
+							<li>Mock method calling itself but is not marked as
+								'reentrant'</li>
+							<li><code>MockUp</code> used with interface but missing <code>getMockInstance()</code>
+								call</li>
+							<li>Mock method missing <code>@Mock</code> annotation
+							</li>
+							<li>and others</li>
+						</ul>
+					</li>
+					<li><p>
+							Automatically adds JMockit jar as
+							<code>-javaagent</code>
+							argument to JUnit launches. <a
+								href="http://jmockit.googlecode.com/svn/trunk/www/gettingStarted.html">info</a>
+						</p>
+					</li>
+				</ol>
 
-<h2>Installation</h2>
+				<h2>Installation</h2>
 
-<p>In Eclipse install using the <a href="http://marketplace.eclipse.org/content/jmockit-eclipse">Marketplace Client</a> from the Help menu</p>
+				<p>
+					In Eclipse install using the <a
+						href="http://marketplace.eclipse.org/content/jmockit-eclipse">Marketplace
+						Client</a> from the Help menu
+				</p>
 
-<p>Alternatively use the Update site:</p>
+				<p>Alternatively use the Update site:</p>
 
-<ul>
-<li><a href="https://raw.github.com/ajermakovics/jmockit-eclipse-updatesite/master">https://raw.github.com/ajermakovics/jmockit-eclipse-updatesite/master</a></li>
-</ul>
+				<h2>Examples</h2>
 
-<p>
-<img src="https://github.com/ajermakovics/eclipse-jmockit-assist/raw/gh-pages/images/jmockit_eclipse_autocomplete.png" alt="Screenshot">
-</p>
+				<ul>
+					<li><a
+						href="https://raw.github.com/ajermakovics/jmockit-eclipse-updatesite/master">https://raw.github.com/ajermakovics/jmockit-eclipse-updatesite/master</a></li>
+				</ul>
 
-<p>
-<img src="https://github.com/ajermakovics/eclipse-jmockit-assist/raw/gh-pages/images/jmockit_errors.png" alt="Screenshot">
-</p>
+				<p>
+					<img
+						src="https://github.com/ajermakovics/eclipse-jmockit-assist/raw/gh-pages/images/jmockit_eclipse_autocomplete.png"
+						alt="Screenshot">
+				</p>
 
-<h2>License</h2>
+				<p>
+					<img
+						src="https://github.com/ajermakovics/eclipse-jmockit-assist/raw/gh-pages/images/jmockit_errors.png"
+						alt="Screenshot">
+				</p>
 
-<p>Eclipse Public License <a href="http://www.eclipse.org/legal/epl-v10.html">1.0</a></p>
-        </section>
+				<h2>License</h2>
 
-        <footer>
-          Eclipse-jmockit-assist is maintained by <a href="https://github.com/ajermakovics">ajermakovics</a><br>
-          This page was generated by <a href="http://pages.github.com">GitHub Pages</a>. Tactile theme by <a href="http://twitter.com/jasonlong">Jason Long</a>.
-        </footer>
+				<p>
+					Eclipse Public License <a
+						href="http://www.eclipse.org/legal/epl-v10.html">1.0</a>
+				</p>
+			</section>
 
-        
-      </div>
-    </div>
-  </body>
+			<footer>
+				Eclipse-jmockit-assist is maintained by <a
+					href="https://github.com/ajermakovics">ajermakovics</a><br>
+				This page was generated by <a href="http://pages.github.com">GitHub
+					Pages</a>. Tactile theme by <a href="http://twitter.com/jasonlong">Jason
+					Long</a>.
+			</footer>
+
+
+		</div>
+	</div>
+</body>
 </html>
