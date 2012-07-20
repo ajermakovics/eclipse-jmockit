@@ -24,7 +24,7 @@ Installation
 In Eclipse instlall using the [Marketplace Client](http://marketplace.eclipse.org/content/jmockit-eclipse) from the Help menu
 
 Alternatively you can use the Update site:
- - https://raw.github.com/ajermakovics/jmockit-eclipse-updatesite/master
+ - http://ajermakovics.github.com/jmockit-eclipse-updatesite/
 
 
 License
