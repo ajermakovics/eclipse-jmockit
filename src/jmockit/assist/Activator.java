@@ -155,6 +155,12 @@ public class Activator extends AbstractUIPlugin
 		return plugin.activeWindow;
 	}
 
+	/**
+	 * Listener to track active window so that it can be read from any thread.
+	 * Otherwise active window can only be determined if called from UI thread.
+	 * 
+	 * @return
+	 */
 	private static IWindowListener createWindowListener()
 	{
 		return new IWindowListener()

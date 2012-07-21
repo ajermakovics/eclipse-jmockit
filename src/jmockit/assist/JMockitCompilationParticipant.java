@@ -228,11 +228,10 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 				f = files.poll();
 
 				worked++;
-				workSize--;
 
-				if( workSize < files.size() ) // more work
+				if( files.size() > workSize - worked ) // added more files
 				{
-					workSize = files.size();
+					workSize = files.size() + worked;
 					mon.beginTask(taskName, workSize);
 					mon.worked(worked);
 				}

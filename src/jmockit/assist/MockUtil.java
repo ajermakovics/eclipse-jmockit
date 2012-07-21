@@ -104,15 +104,23 @@ public class MockUtil
 		return typePar;
 	}
 
-	public static IMethodBinding findRealMethodInType(final ITypeBinding type, final String name,
+	public static IMethodBinding findRealMethodInType(ITypeBinding type, IMethodBinding meth, AST ast)
+	{
+		return findRealMethodInType(type, meth.getName(), meth.getParameterTypes(), ast);
+	}
+
+	public static IMethodBinding findRealMethodInType(final ITypeBinding type, final String mname,
 			final ITypeBinding[] paramTypes, final AST ast)
 	{
+		String name = mname;
+		if( MockUtil.CTOR.equals(name) )
+			name = type.getName();
+		
 		IMethodBinding origMethod = ASTUtil.findMethodInType(type, name, paramTypes);
 
-		if( origMethod == null && type.isInterface() && ast != null ) // interfaces can mock Object methods
+		if( origMethod == null && type.isInterface() && ast != null ) // interfaces can mock Object.class methods
 		{
 			ITypeBinding objType = ast.resolveWellKnownType(Object.class.getName());
-
 			origMethod = ASTUtil.findMethodInType(objType, name, paramTypes);
 		}
 
@@ -172,6 +180,21 @@ public class MockUtil
 		}
 
 		return declaringType;
+	}
+
+	public static ITypeBinding getMockType(final ASTNode node)
+	{
+		ITypeBinding mockType = null;
+	
+		if (node instanceof AnonymousClassDeclaration)
+		{
+			mockType = ((AnonymousClassDeclaration) node).resolveBinding();
+		}
+		else if( node instanceof TypeDeclaration )
+		{
+			mockType = ((TypeDeclaration) node).resolveBinding();
+		}
+		return mockType;
 	}
 
 }

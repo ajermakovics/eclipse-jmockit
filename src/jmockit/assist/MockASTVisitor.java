@@ -103,16 +103,9 @@ public final class MockASTVisitor extends ASTVisitor
 
 		if (mockedType != null)
 		{
-			String name = meth.getName();
-
-			if ( MockUtil.CTOR.equals(name)) // constructor
-			{
-				name = mockedType.getName();
-			}
-
-			ITypeBinding[] parameterTypes = meth.getParameterTypes(); // .getErasure()
-			origMethod = MockUtil.findRealMethodInType(mockedType, name, parameterTypes, node.getAST());
+			origMethod = MockUtil.findRealMethodInType(mockedType, meth, node.getAST());
 		}
+
 		return origMethod;
 	}
 

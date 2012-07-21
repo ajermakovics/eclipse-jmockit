@@ -200,7 +200,12 @@ implements ICompletionProposalExtension4
 		{
 			setReturnStatement(stub, method, declaringType, ast, rewrite);
 		}
-
+		
+		if( "void".equals(method.getReturnType().getName()) )
+		{
+			stub.getBody().statements().clear();
+		}
+		
 		return stub;
 	}
 

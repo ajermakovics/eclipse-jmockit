@@ -27,13 +27,11 @@ import org.eclipse.jdt.core.IMethod;
 import org.eclipse.jdt.core.JavaModelException;
 import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ASTNode;
-import org.eclipse.jdt.core.dom.AnonymousClassDeclaration;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.IVariableBinding;
 import org.eclipse.jdt.core.dom.NodeFinder;
-import org.eclipse.jdt.core.dom.TypeDeclaration;
 import org.eclipse.jdt.internal.ui.JavaPluginImages;
 import org.eclipse.jdt.internal.ui.text.java.JavaCompletionProposal;
 import org.eclipse.jdt.ui.text.java.ContentAssistInvocationContext;
@@ -77,7 +75,7 @@ public class JmockitProposalComputer implements IJavaCompletionProposalComputer,
 			{
 				ASTNode node = NodeFinder.perform(astRoot, context.getInvocationOffset(), 1);
 
-				mockType = getMockType(node);
+				mockType = MockUtil.getMockType(node);
 				paramType = findMockedTypeFromNode(node);
 			}
 		}
@@ -96,21 +94,6 @@ public class JmockitProposalComputer implements IJavaCompletionProposalComputer,
 		}
 
 		return Collections.emptyList();
-	}
-
-	private static ITypeBinding getMockType(final ASTNode node)
-	{
-		ITypeBinding mockType = null;
-
-		if (node instanceof AnonymousClassDeclaration)
-		{
-			mockType = ((AnonymousClassDeclaration) node).resolveBinding();
-		}
-		else if( node instanceof TypeDeclaration )
-		{
-			mockType = ((TypeDeclaration) node).resolveBinding();
-		}
-		return mockType;
 	}
 
 	public final ICompilationUnit getCompilationUnit(final ContentAssistInvocationContext context)
@@ -228,6 +211,10 @@ public class JmockitProposalComputer implements IJavaCompletionProposalComputer,
 	private String getParameters(final IMethodBinding methBinding) throws JavaModelException
 	{
 		IMethod meth = (IMethod) methBinding.getJavaElement();
+		
+		if( meth == null )
+			return "";
+		
 		String[] paramNames = meth.getParameterNames();
 
 		String params= "";

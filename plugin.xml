@@ -62,6 +62,17 @@
            class="jmockit.assist.prefs.PrefInitializer">
      </initializer>
   </extension>
+  <extension
+        point="org.eclipse.ui.workbench.texteditor.hyperlinkDetectors">
+     <hyperlinkDetector
+           activate="true"
+           class="jmockit.assist.HyperlinkDetector"
+           description="Open real method in class"
+           id="jmockit.assist.hyperlinkDetector"
+           name="Open Mocked Method"
+           targetId="org.eclipse.jdt.ui.javaCode">
+     </hyperlinkDetector>
+  </extension>
 
 
 
