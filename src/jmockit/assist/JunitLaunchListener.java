@@ -130,6 +130,7 @@ final class JunitLaunchListener implements ILaunchesListener2
 		else
 		{
 			var.setValue(value);
+			var.setDescription(value);
 		}
 	}
 
@@ -169,7 +170,7 @@ final class JunitLaunchListener implements ILaunchesListener2
 
 				if (new File(jarPath).exists())
 				{
-					String javaagentArg = "-javaagent:" + jarPath;
+					String javaagentArg = "-javaagent:\"" + jarPath + "\"";
 					setOrCreateVariable(javaagentArg);
 
 					if (!vmargs.contains(JunitLaunchListener.JMOCKIT_VAR) && !vmargs.contains("-javaagent"))
