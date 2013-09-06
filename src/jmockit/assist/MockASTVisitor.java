@@ -102,9 +102,7 @@ public final class MockASTVisitor extends ASTVisitor
 		IMethodBinding origMethod = null;
 
 		if (mockedType != null)
-		{
-			origMethod = MockUtil.findRealMethodInType(mockedType, meth, node.getAST());
-		}
+			origMethod = MockUtil.findRealMethodInType(mockedType, new InvocationFilter(meth), node.getAST());
 
 		return origMethod;
 	}
