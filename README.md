@@ -18,7 +18,7 @@ Features / Usage
 
 3. Lets you jump to real method from mock method. Hold Ctrl (Cmd) over mock method name.
 
-4. Automatically adds JMockit jar as `-javaagent` argument to JUnit launches. [info](http://jmockit.googlecode.com/svn/trunk/www/gettingStarted.html)
+4. Automatically adds JMockit jar as `-javaagent` argument to JUnit launches. [info](http://jmockit.org/gettingStarted.html)
 
 
 Installation
