@@ -137,7 +137,10 @@ public final class JMockitCompilationParticipant extends CompilationParticipant
 		IType mockitType = null;
 		try
 		{
-			mockitType = project.findType(MockUtil.MOCKIT);
+			mockitType = project.findType(MockUtil.MOCK);
+			if (mockitType == null) {
+				mockitType = project.findType(MockUtil.MOCKIT);
+			}
 		}
 		catch (JavaModelException e)
 		{
