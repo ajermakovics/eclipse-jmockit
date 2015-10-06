@@ -153,9 +153,9 @@ final class JunitLaunchListener implements ILaunchesListener2
 		IJavaModel javaModel = JavaCore.create(ResourcesPlugin.getWorkspace().getRoot());
 		IJavaProject jproj = javaModel.getJavaProject(project);
 
-		IType mockitType = jproj.findType("mockit.Mock");
+		IType mockitType = jproj.findType(MockUtil.MOCK);
 		if (mockitType == null) {
-		  mockitType = jproj.findType("mockit.Mockit");
+		  mockitType = jproj.findType(MockUtil.MOCKIT);
 		}
 
 		if (mockitType != null)
