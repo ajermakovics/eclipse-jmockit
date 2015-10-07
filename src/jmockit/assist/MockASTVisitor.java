@@ -85,12 +85,12 @@ public final class MockASTVisitor extends ASTVisitor
 				{
 					addMarker(node.getName(), "Mocked method missing @Mock annotation", false);
 				}
-	
+
 				if (hasMockAnn && !methodExists )
 				{
 					addMarker(node.getName(), "Mocked real method not found in type", true);
 				}
-	
+
 				if (hasMockAnn && methodExists && isPrivate(meth.getModifiers()))
 				{
 					addMarker(node.getName(), "Mocked method should not be private", true);
@@ -100,7 +100,7 @@ public final class MockASTVisitor extends ASTVisitor
 
 		return true;
 	}
-	
+
 	public IMethodBinding findRealMethod(final MethodDeclaration node,
 			final IMethodBinding meth, final ITypeBinding mockedType)
 	{
