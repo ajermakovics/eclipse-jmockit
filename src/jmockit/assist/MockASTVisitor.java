@@ -75,8 +75,9 @@ public final class MockASTVisitor extends ASTVisitor
 		if ( mockedType != null )
 		{
 			boolean hasMockAnn = MockUtil.isMockMethod(meth);
-			boolean methodExists = findRealMethod(node, meth, mockedType) != null;
-
+			boolean isClassInitMock = MockUtil.isClassInitializerMock(meth);
+			boolean methodExists = isClassInitMock || findRealMethod(node, meth, mockedType) != null;
+	
 			if (!hasMockAnn && methodExists )
 			{
 				addMarker(node.getName(), "Mocked method missing @Mock annotation", false);
