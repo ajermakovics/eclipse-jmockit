@@ -30,8 +30,19 @@ public class MockUtil
 	public static final String MOCK_UP = "mockit.MockUp";
 	public static final String MOCK_CLASS = "mockit.MockClass";
 
+	public static final String CLASSINIT = "$clinit";
 	public static final String CTOR = "$init";
 	public static final String GET_INST = "getMockInstance";
+
+	/**
+	 * Tests if the method is a mock-method for (static) class initializers.
+	 * @param meth The mock-method to test. 
+	 * @return {@code true} if the method is a mock-method for (static) class initializers
+	 */
+	public static boolean isClassInitializerMock(final IMethodBinding meth)
+	{
+		return meth != null && meth.getName().equals(CLASSINIT);
+	}
 
 	public static boolean isMockMethod(final IMethodBinding meth)
 	{
