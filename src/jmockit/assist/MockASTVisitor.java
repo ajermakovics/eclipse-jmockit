@@ -74,27 +74,23 @@ public final class MockASTVisitor extends ASTVisitor
 
 		if ( mockedType != null )
 		{
+			boolean hasMockAnn = MockUtil.isMockMethod(meth);
 			boolean isClassInitMock = MockUtil.isClassInitializerMock(meth);
-
-			if (!isClassInitMock)
-			{		
-				boolean hasMockAnn = MockUtil.isMockMethod(meth);
-				boolean methodExists = findRealMethod(node, meth, mockedType) != null;
+			boolean methodExists = isClassInitMock || findRealMethod(node, meth, mockedType) != null;
 	
-				if (!hasMockAnn && methodExists )
-				{
-					addMarker(node.getName(), "Mocked method missing @Mock annotation", false);
-				}
+			if (!hasMockAnn && methodExists )
+			{
+				addMarker(node.getName(), "Mocked method missing @Mock annotation", false);
+			}
 
-				if (hasMockAnn && !methodExists )
-				{
-					addMarker(node.getName(), "Mocked real method not found in type", true);
-				}
+			if (hasMockAnn && !methodExists )
+			{
+				addMarker(node.getName(), "Mocked real method not found in type", true);
+			}
 
-				if (hasMockAnn && methodExists && isPrivate(meth.getModifiers()))
-				{
-					addMarker(node.getName(), "Mocked method should not be private", true);
-				}
+			if (hasMockAnn && methodExists && isPrivate(meth.getModifiers()))
+			{
+				addMarker(node.getName(), "Mocked method should not be private", true);
 			}
 		}
 
