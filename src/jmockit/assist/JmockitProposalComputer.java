@@ -120,6 +120,8 @@ public class JmockitProposalComputer implements IJavaCompletionProposalComputer,
 		String prefix = context.computeIdentifierPrefix().toString();
 		Set<String> existingMethods = ASTUtil.getMethodSignatures(mockType);
 
+		addClinitProposal(context, paramType, mockType, list, prefix);
+
 		addItFieldProposal(context, paramType, mockType, list, prefix);
 
 		for (final IMethodBinding meth : ASTUtil.getAllMethods(paramType, ast) )
@@ -154,6 +156,37 @@ public class JmockitProposalComputer implements IJavaCompletionProposalComputer,
 
 		return new ArrayList<ICompletionProposal>(list);
 					}
+
+	private void addClinitProposal(final ContentAssistInvocationContext context, final ITypeBinding paramType,
+			final ITypeBinding mockType, final Collection<IJavaCompletionProposal> list, final String prefix)
+	{
+		boolean hasClinit = false;
+		for(IMethodBinding method : mockType.getDeclaredMethods())
+		{
+			if( MockUtil.CLASSINIT.equals( method.getName() ) )
+			{
+				hasClinit = true;
+				break;
+			}
+		}
+
+		if( !hasClinit )
+		{
+			StyledString displayName = new StyledString(MockUtil.CLASSINIT + "() : void");
+			displayName.append(" - Mock class initialisers of '" + paramType.getName() +"'", QUALIFIER_STYLER);
+
+			StringBuffer buffer = new StringBuffer();
+			buffer.append("@Mock ");
+			buffer.append("void ").append(MockUtil.CLASSINIT).append("()");
+			buffer.append(" { }");
+			
+			IJavaCompletionProposal proposal
+			= new JavaCompletionProposal(buffer.toString(), context.getInvocationOffset()-prefix.length(), prefix.length(),
+					JavaPluginImages.get(JavaPluginImages.IMG_MISC_DEFAULT), displayName, MockMethodCompletionProposal.METHOD_RELEVANCE);
+
+			list.add( proposal );
+		}
+	}
 
 	private void addItFieldProposal(final ContentAssistInvocationContext context, final ITypeBinding paramType,
 			final ITypeBinding mockType, final Collection<IJavaCompletionProposal> list, final String prefix)
@@ -288,5 +321,5 @@ public class JmockitProposalComputer implements IJavaCompletionProposalComputer,
 	{
 		//System.err.println("get assist");
 		return new IJavaCompletionProposal[]{};
-	}
+	}	
 }
