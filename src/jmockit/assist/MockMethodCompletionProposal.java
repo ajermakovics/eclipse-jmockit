@@ -26,6 +26,7 @@ import org.eclipse.jdt.core.dom.AnonymousClassDeclaration;
 import org.eclipse.jdt.core.dom.ChildListPropertyDescriptor;
 import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.Expression;
+import org.eclipse.jdt.core.dom.IBinding;
 import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
 import org.eclipse.jdt.core.dom.MethodDeclaration;
@@ -180,8 +181,14 @@ implements ICompletionProposalExtension4
 	{
 		ITypeBinding declaringType = method.getDeclaringClass();
 
-		MethodDeclaration stub = StubUtility2.createImplementationStub(fCompilationUnit, rewrite,
-				importRewrite, context, method, declaringType.getName(), settings, false);
+		MethodDeclaration stub;
+		IBinding contextBinding = declaringType;
+		stub = StubUtility2.createImplementationStub(fCompilationUnit, rewrite, importRewrite, context, method,
+
+				declaringType, settings, false, contextBinding);
+
+		// stub = StubUtility2.createImplementationStub(fCompilationUnit, rewrite,
+		//		importRewrite, context, method, declaringType, settings, false);
 
 		if( !Object.class.getName().equals( method.getDeclaringClass().getQualifiedName() ) )
 		{
@@ -200,12 +207,12 @@ implements ICompletionProposalExtension4
 		{
 			setReturnStatement(stub, method, declaringType, ast, rewrite);
 		}
-		
+
 		if( "void".equals(method.getReturnType().getName()) )
 		{
 			stub.getBody().statements().clear();
 		}
-		
+
 		return stub;
 	}
 

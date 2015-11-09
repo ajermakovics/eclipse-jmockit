@@ -162,4 +162,14 @@ public class InvocationFilter implements IMethodBinding {
 		return originalBinding.overrides(arg0);
 	}
 
+	@Override
+	public ITypeBinding getDeclaredReceiverType() {
+		return originalBinding.getDeclaredReceiverType();
+	}
+
+	@Override
+	public IBinding getDeclaringMember() {
+		return originalBinding.getDeclaringMember();
+	}
+
 }
