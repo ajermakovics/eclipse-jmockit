@@ -125,7 +125,7 @@ This Agreement is governed by the laws of the State of New York and the intellec
    </requires>
 
    <plugin
-         id="eclipse-jmockit-assist"
+         id="jmockit-plugin"
          download-size="0"
          install-size="0"
          version="0.0.0"
