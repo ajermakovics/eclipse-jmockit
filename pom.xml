@@ -5,12 +5,11 @@
 	<modelVersion>4.0.0</modelVersion>
 	<artifactId>eclipse-jmockit-assist</artifactId>
 	<packaging>eclipse-plugin</packaging>
-	<version>1.0.0</version>
 	
 	<parent>
 		<groupId>ajermakovics</groupId>
 		<artifactId>eclipse-jmockit-assist-master</artifactId>
-		<version>1.0.0</version>
+		<version>${global.version}</version>
 		<relativePath>../jmockit-eclipse-updatesite/mavenMaster/pom.xml</relativePath>
 	</parent>
 </project>
