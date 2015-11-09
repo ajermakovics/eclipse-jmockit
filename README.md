@@ -26,8 +26,21 @@ Installation
 In Eclipse instlall using the [Marketplace Client](http://marketplace.eclipse.org/content/jmockit-eclipse) from the Help menu
 
 Alternatively you can use the Update site:
- - http://dl.bintray.com/ajermakovics/jmockit/1.0.1/
+ - http://dl.bintray.com/ajermakovics/jmockit/1.0.1/ (Eclipse 4.5+)
+ - http://dl.bintray.com/ajermakovics/jmockit/1.0.0/ (Pre 4.5)
 
+Development
+--
+
+To build run `mvn clean install` which will build the update site in `updatesite/target/repository/`. You can then install the plugin from that directory.
+
+To develop you will need Eclipse (4.5+) with Plug-In Development Environment (PDE) installed:
+* Use File -> Import -> Existing Projects to import all projects from this repo
+* To run or debug right click on 'jmockit-plugin' project and select Run As -> Eclipse Application
+
+To use the plug-in in existing Eclipse installation do:
+* Right click on jmockit-plugin project, Export -> Deployable plug-ins
+* Choose an existing Eclipse installation directory. Restart Eclipse
 
 License
 --
