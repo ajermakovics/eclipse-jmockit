@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<site>
+   <feature url="features/JMockit_Eclipse_Plugin_1.0.1.jar" id="JMockit_Eclipse_Plugin" version="1.0.1">
+      <category name="JMockit Eclipse"/>
+   </feature>
+   <category-def name="JMockit Eclipse" label="JMockit Eclipse"/>
+</site>

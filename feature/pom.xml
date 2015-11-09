@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project>
+  <modelVersion>4.0.0</modelVersion>
+  <artifactId>JMockit_Eclipse_Plugin</artifactId>
+  <packaging>eclipse-feature</packaging>
+  
+  <parent>
+		<groupId>com.github.ajermakovics.eclipse-jmockit</groupId>
+		<artifactId>parent</artifactId>
+		<version>${global.version}</version>
+		<relativePath>../pom.xml</relativePath>
+	</parent>
+
+</project> 
