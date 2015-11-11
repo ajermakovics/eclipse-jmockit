@@ -23,7 +23,7 @@ Features / Usage
 
 Installation
 --
-In Eclipse instlall using the [Marketplace Client](http://marketplace.eclipse.org/content/jmockit-eclipse) from the Help menu
+In Eclipse install using the [Marketplace Client](http://marketplace.eclipse.org/content/jmockit-eclipse) from the Help menu
 
 Alternatively you can use the Update site:
  - http://dl.bintray.com/ajermakovics/jmockit/1.0.1/ (Eclipse 4.5+)
