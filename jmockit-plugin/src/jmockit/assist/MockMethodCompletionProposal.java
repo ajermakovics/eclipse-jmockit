@@ -41,7 +41,6 @@ import org.eclipse.jdt.core.dom.rewrite.ListRewrite;
 import org.eclipse.jdt.core.formatter.IndentManipulation;
 import org.eclipse.jdt.internal.corext.codemanipulation.CodeGenerationSettings;
 import org.eclipse.jdt.internal.corext.codemanipulation.ContextSensitiveImportRewriteContext;
-import org.eclipse.jdt.internal.corext.codemanipulation.StubUtility;
 import org.eclipse.jdt.internal.corext.codemanipulation.StubUtility2;
 import org.eclipse.jdt.internal.corext.dom.ASTNodeFactory;
 import org.eclipse.jdt.internal.corext.dom.ASTNodes;
@@ -185,7 +184,7 @@ implements ICompletionProposalExtension4
 		IBinding contextBinding = declaringType;
 		stub = StubUtility2.createImplementationStub(fCompilationUnit, rewrite, importRewrite, context, method,
 
-				declaringType, settings, false, contextBinding);
+				declaringType, settings, false, null);
 
 		// stub = StubUtility2.createImplementationStub(fCompilationUnit, rewrite,
 		//		importRewrite, context, method, declaringType, settings, false);
@@ -278,7 +277,7 @@ implements ICompletionProposalExtension4
 		}
 		else
 		{
-			importRewrite = StubUtility.createImportRewrite(unit, true); // create a dummy import rewriter to have one
+			importRewrite = ImportRewrite.create(unit, true);
 			context = createImportRewriteContext();
 		}
 	}

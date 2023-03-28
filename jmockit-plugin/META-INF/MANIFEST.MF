@@ -2,7 +2,7 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: Eclipse-jmockit-assist
 Bundle-SymbolicName: jmockit-plugin;singleton:=true
-Bundle-Version: 1.0.1
+Bundle-Version: 1.0.2
 Bundle-Activator: jmockit.assist.Activator
 Require-Bundle: org.eclipse.core.runtime,
  org.eclipse.jdt.core,
