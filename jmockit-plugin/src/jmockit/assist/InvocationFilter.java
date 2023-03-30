@@ -174,11 +174,6 @@ public class InvocationFilter implements IMethodBinding {
 	}
 
 	@Override
-	public String[] getParameterNames() {
-		return originalBinding.getParameterNames();
-	}
-
-	@Override
 	public IVariableBinding[] getSyntheticOuterLocals() {
 		return originalBinding.getSyntheticOuterLocals();
 	}

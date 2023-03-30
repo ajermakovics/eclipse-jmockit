@@ -34,10 +34,6 @@ public final class PreferencePage extends FieldEditorPreferencePage implements I
 		setDescription("JMockit Eclipse plug-in preferences");
 	}
 
-	@Override
-	public void init(final IWorkbench workbench)
-	{
-	}
 
 	@Override
 	protected void createFieldEditors()
@@ -84,5 +80,9 @@ public final class PreferencePage extends FieldEditorPreferencePage implements I
 				setMessage("Checks will be performed on next build", INFORMATION);
 			}
 		}
+	}
+
+	public void init(IWorkbench iWorkbench) {
+
 	}
 }

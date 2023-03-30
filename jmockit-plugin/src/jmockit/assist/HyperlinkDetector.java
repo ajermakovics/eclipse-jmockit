@@ -40,7 +40,6 @@ public class HyperlinkDetector extends AbstractHyperlinkDetector
 	{
 	}
 
-	@Override
 	public final IHyperlink[] detectHyperlinks(final ITextViewer textViewer, final IRegion region,
 			final boolean canShowMultipleHyperlinks)
 	{
