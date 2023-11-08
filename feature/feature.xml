@@ -2,7 +2,7 @@
 <feature
       id="JMockit_Eclipse_Plugin"
       label="JMockit Eclipse Plug-in"
-      version="1.0.1"
+      version="1.0.2"
       provider-name="Andrejs Jermakovics">
 
    <description url="http://github.com/ajermakovics/eclipse-jmockit-assist">

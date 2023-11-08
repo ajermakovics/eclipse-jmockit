@@ -5,6 +5,7 @@ import org.eclipse.jdt.core.dom.IAnnotationBinding;
 import org.eclipse.jdt.core.dom.IBinding;
 import org.eclipse.jdt.core.dom.IMethodBinding;
 import org.eclipse.jdt.core.dom.ITypeBinding;
+import org.eclipse.jdt.core.dom.IVariableBinding;
 
 public class InvocationFilter implements IMethodBinding {
 	IMethodBinding originalBinding;
@@ -170,6 +171,26 @@ public class InvocationFilter implements IMethodBinding {
 	@Override
 	public IBinding getDeclaringMember() {
 		return originalBinding.getDeclaringMember();
+	}
+
+	@Override
+	public IVariableBinding[] getSyntheticOuterLocals() {
+		return originalBinding.getSyntheticOuterLocals();
+	}
+
+	@Override
+	public boolean isCanonicalConstructor() {
+		return originalBinding.isCanonicalConstructor();
+	}
+
+	@Override
+	public boolean isCompactConstructor() {
+		return originalBinding.isCompactConstructor();
+	}
+
+	@Override
+	public boolean isSyntheticRecordMethod() {
+		return originalBinding.isSyntheticRecordMethod();
 	}
 
 }
